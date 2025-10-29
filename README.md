@@ -7,4 +7,4 @@ Repository for all homework in compilation course
 [-] Ilay Abramovich <br/>
 
 ## Test Section
-Rule inforcemnet test - max
+Rule inforcemnet test 2 - max
