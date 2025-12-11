@@ -9,19 +9,21 @@ public class AstExpNew extends AstExp
     public AstType type;
 
     // Constructor for: new Type
-    public AstExpNew(AstType type)
+    public AstExpNew(AstType type, int lineNumber)
     {
         serialNumber = AstNodeSerialNumber.getFresh();
         this.exp = null;
         this.type = type;
+        this.lineNumber = lineNumber;
     }
 
     // Constructor for: new Type[exp]
-    public AstExpNew(AstType type, AstExp exp)
+    public AstExpNew(AstType type, AstExp exp, int lineNumber)
     {
         serialNumber = AstNodeSerialNumber.getFresh();
         this.exp = exp;
         this.type = type;
+        this.lineNumber = lineNumber;
     }
 
     public void printMe(){
@@ -79,13 +81,13 @@ public class AstExpNew extends AstExp
                 throw new SemanticException("array size must be int", lineNumber);
             }
 
-            // Check for constant negative size
+            // Check for constant non-positive size (must be > 0)
             if (exp instanceof AstExpInt)
             {
                 AstExpInt sizeExp = (AstExpInt) exp;
-                if (sizeExp.value < 0)
+                if (sizeExp.value <= 0)
                 {
-                    throw new SemanticException("array size must be >= 0", lineNumber);
+                    throw new SemanticException("array size must be > 0", lineNumber);
                 }
             }
 

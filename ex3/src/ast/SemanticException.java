@@ -1,3 +1,5 @@
+package ast;
+
 /**
  * Exception thrown when a semantic error is encountered during semantic analysis.
  * Contains the line number where the error occurred.

@@ -12,13 +12,14 @@ public class AstStmtIfElse extends AstStmt
 	/*******************/
 	/*  CONSTRUCTOR(S) */
 	/*******************/
-	public AstStmtIfElse(AstExp cond, AstStmtList ifBody, AstStmtList elseBody)
+	public AstStmtIfElse(AstExp cond, AstStmtList ifBody, AstStmtList elseBody, int lineNumber)
 	{
 		serialNumber = AstNodeSerialNumber.getFresh();
 		System.out.print("====================== stmt -> IF LPAREN exp RPAREN LBRACE stmtList RBRACE ELSE LBRACE stmtList RBRACE\n");
 		this.cond = cond;
 		this.ifBody = ifBody;
 		this.elseBody = elseBody;
+		this.lineNumber = lineNumber;
 	}
 
 	/************************************************************/
@@ -44,7 +45,7 @@ public class AstStmtIfElse extends AstStmt
 	/* Checks that condition is int and analyzes both       */
 	/* branches in separate scopes                          */
 	/********************************************************/
-	public void semantMe() throws SemanticException
+	public Type semantMe() throws SemanticException
 	{
 		/****************************/
 		/* [1] Check condition type */
@@ -82,6 +83,8 @@ public class AstStmtIfElse extends AstStmt
 		}
 
 		SymbolTable.getInstance().endScope();
+
+		return null;
 	}
 }
 

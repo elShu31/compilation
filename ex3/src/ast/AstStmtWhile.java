@@ -11,10 +11,11 @@ public class AstStmtWhile extends AstStmt
 	/*******************/
 	/*  CONSTRUCTOR(S) */
 	/*******************/
-	public AstStmtWhile(AstExp cond, AstStmtList body)
+	public AstStmtWhile(AstExp cond, AstStmtList body, int lineNumber)
 	{
 		this.cond = cond;
 		this.body = body;
+		this.lineNumber = lineNumber;
 	}
 
 	/********************************************************/
@@ -22,7 +23,7 @@ public class AstStmtWhile extends AstStmt
 	/* Checks that condition is int and analyzes body       */
 	/* in a new scope                                       */
 	/********************************************************/
-	public void semantMe() throws SemanticException
+	public Type semantMe() throws SemanticException
 	{
 		/****************************/
 		/* [1] Check condition type */
@@ -48,5 +49,7 @@ public class AstStmtWhile extends AstStmt
 		}
 
 		SymbolTable.getInstance().endScope();
+
+		return null;
 	}
 }

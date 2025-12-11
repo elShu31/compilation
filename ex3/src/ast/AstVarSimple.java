@@ -13,13 +13,13 @@ public class AstVarSimple extends AstVar
 	/******************/
 	/* CONSTRUCTOR(S) */
 	/******************/
-	public AstVarSimple(String name)
+	public AstVarSimple(String name, int lineNumber)
 	{
 		/******************************/
 		/* SET A UNIQUE SERIAL NUMBER */
 		/******************************/
 		serialNumber = AstNodeSerialNumber.getFresh();
-	
+
 		/***************************************/
 		/* PRINT CORRESPONDING DERIVATION RULE */
 		/***************************************/
@@ -29,6 +29,7 @@ public class AstVarSimple extends AstVar
 		/* COPY INPUT DATA MEMBERS ... */
 		/*******************************/
 		this.name = name;
+		this.lineNumber = lineNumber;
 	}
 
 	/**************************************************/
@@ -60,6 +61,12 @@ public class AstVarSimple extends AstVar
 		if (t == null)
 		{
 			throw new SemanticException("undefined variable " + name, lineNumber);
+		}
+
+		// If it's a field, return the field's type, not the TypeField wrapper
+		if (t instanceof TypeField)
+		{
+			return ((TypeField) t).fieldType;
 		}
 
 		return t;

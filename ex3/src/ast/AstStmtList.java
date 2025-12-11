@@ -12,7 +12,7 @@ public class AstStmtList extends AstNode
 	/******************/
 	/* CONSTRUCTOR(S) */
 	/******************/
-	public AstStmtList(AstStmt head, AstStmtList tail)
+	public AstStmtList(AstStmt head, AstStmtList tail, int lineNumber)
 	{
 		/******************************/
 		/* SET A UNIQUE SERIAL NUMBER */
@@ -30,6 +30,7 @@ public class AstStmtList extends AstNode
 		/*******************************/
 		this.head = head;
 		this.tail = tail;
+		this.lineNumber = lineNumber;
 	}
 
 	/******************************************************/
@@ -62,11 +63,11 @@ public class AstStmtList extends AstNode
 		if (tail != null) AstGraphviz.getInstance().logEdge(serialNumber,tail.serialNumber);
 	}
 
-	public Type semantMe()
+	public Type semantMe() throws SemanticException
 	{
 		if (head != null) head.semantMe();
 		if (tail != null) tail.semantMe();
-		
+
 		return null;
 	}
 }

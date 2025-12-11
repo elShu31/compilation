@@ -9,11 +9,12 @@ public class AstStmtVarDec extends AstStmt
 	/*******************/
 	/*  CONSTRUCTOR(S) */
 	/*******************/
-	public AstStmtVarDec(AstDecVar varDec)
+	public AstStmtVarDec(AstDecVar varDec, int lineNumber)
 	{
 		serialNumber = AstNodeSerialNumber.getFresh();
 		System.out.print("====================== stmt -> varDec\n");
 		this.varDec = varDec;
+		this.lineNumber = lineNumber;
 	}
 
 	/********************************************************/
@@ -30,7 +31,7 @@ public class AstStmtVarDec extends AstStmt
 		if (varDec != null) AstGraphviz.getInstance().logEdge(serialNumber, varDec.serialNumber);
 	}
 
-	public Type semantMe()
+	public Type semantMe() throws SemanticException
 	{
 		return varDec.semantMe();
 	}

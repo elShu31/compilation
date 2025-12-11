@@ -8,17 +8,19 @@ public class AstDecVar extends AstNode {
     public AstType type;
     public AstExp exp = null;
 
-    public AstDecVar(String id, AstType type) {
+    public AstDecVar(String id, AstType type, int lineNumber) {
         serialNumber = AstNodeSerialNumber.getFresh();
         this.id = id;
         this.type = type;
+        this.lineNumber = lineNumber;
     }
 
-    public AstDecVar(String id, AstType type, AstExp exp) {
+    public AstDecVar(String id, AstType type, AstExp exp, int lineNumber) {
         serialNumber = AstNodeSerialNumber.getFresh();
         this.id = id;
         this.type = type;
         this.exp = exp;
+        this.lineNumber = lineNumber;
     }
 
     public void printMe() {
@@ -36,6 +38,11 @@ public class AstDecVar extends AstNode {
     public Type semantMe() throws SemanticException
 	{
 		Type t;
+
+		/************************************/
+		/* [0] Check for reserved keyword   */
+		/************************************/
+		TypeUtils.checkNotReservedKeyword(id, lineNumber);
 
 		/****************************/
 		/* [1] Check If Type exists */
@@ -58,7 +65,7 @@ public class AstDecVar extends AstNode {
 		/* [3] Check That Name does NOT exist */
 		/* in current scope                   */
 		/**************************************/
-		if (SymbolTable.getInstance().find(id) != null)
+		if (SymbolTable.getInstance().findInCurrentScope(id) != null)
 		{
 			throw new SemanticException("variable " + id + " already exists in scope", lineNumber);
 		}
