@@ -1,4 +1,4 @@
-name: CI
+name: Tests
 on:
   pull_request:
     branches: [ main ]
@@ -6,7 +6,7 @@ on:
     branches: [ main ]
 
 jobs:
-  error-prone:
+  tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,20 +22,22 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y jflex
 
-      - name: Generate Lexer and Parser
+      - name: Build Project
         run: |
           cd ex3
-          # Generate Lexer.java from LEX_FILE.lex
+          # Generate Lexer.java
           jflex -q -d src jflex/LEX_FILE.lex
-          # Generate Parser.java and TokenNames.java from CUP_FILE.cup
+          # Generate Parser.java and TokenNames.java
           java -jar external_jars/java-cup-11b.jar -nowarn -parser Parser -symbols TokenNames -destdir src cup/CUP_FILE.cup
+          # Compile
+          mkdir -p bin
+          javac -cp external_jars/java-cup-11b-runtime.jar -d bin src/*.java src/*/*.java
+          # Create JAR
+          jar cfm SEMANT manifest/MANIFEST.MF -C bin .
 
-      - name: Install Error Prone
+      - name: Run Tests
         run: |
-          chmod +x scripts/install_errorprone.sh
-          ./scripts/install_errorprone.sh
+          cd ex3
+          chmod +x run_tests.sh
+          TERM=dumb ./run_tests.sh
 
-      - name: Compile with Error Prone
-        run: |
-          chmod +x scripts/compile_with_errorprone.sh
-          ./scripts/compile_with_errorprone.sh
