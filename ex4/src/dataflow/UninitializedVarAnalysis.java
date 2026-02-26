@@ -31,9 +31,6 @@ public class UninitializedVarAnalysis extends DataflowAnalysis<UninitializedVarS
     /** Set of variable names that were used while possibly uninitialized */
     private Set<String> uninitializedUses;
     
-    /** Index of the "main" label in the IR (separates globals from main) */
-    private int mainLabelIndex;
-    
     /******************/
     /* CONSTRUCTOR(S) */
     /******************/
@@ -41,27 +38,6 @@ public class UninitializedVarAnalysis extends DataflowAnalysis<UninitializedVarS
     {
         super(cfg);
         this.uninitializedUses = new TreeSet<>(); // TreeSet for alphabetical order
-        this.mainLabelIndex = findMainLabelIndex();
-    }
-    
-    /****************************************/
-    /* Find the index of the "main" label  */
-    /****************************************/
-    private int findMainLabelIndex()
-    {
-        List<IrCommand> commands = cfg.getCommands();
-        for (int i = 0; i < commands.size(); i++)
-        {
-            IrCommand cmd = commands.get(i);
-            if (cmd instanceof IrCommandLabel)
-            {
-                if ("main".equals(((IrCommandLabel) cmd).labelName))
-                {
-                    return i;
-                }
-            }
-        }
-        return 0; // Default to start if no main label found
     }
     
     /****************************************/
@@ -79,25 +55,12 @@ public class UninitializedVarAnalysis extends DataflowAnalysis<UninitializedVarS
     
     /**
      * Create the boundary state for the entry node.
-     * Scan global variable declarations (before main) to find uninitialized globals.
-     * Also tracks tainted temps to properly handle initialization chains.
+     * Starts with an empty state (no variables uninitialized yet).
      */
     @Override
     protected UninitializedVarState createBoundaryState()
     {
-        UninitializedVarState state = new UninitializedVarState();
-
-        // Process all commands before main to determine initial global state
-        // We simulate the effect of global declarations with taint tracking
-        List<IrCommand> commands = cfg.getCommands();
-        for (int i = 0; i < mainLabelIndex; i++)
-        {
-            IrCommand cmd = commands.get(i);
-            // Reuse the transfer function to handle all command types consistently
-            transfer(cmd, state);
-        }
-
-        return state;
+        return new UninitializedVarState();
     }
     
     /**
@@ -216,5 +179,27 @@ public class UninitializedVarAnalysis extends DataflowAnalysis<UninitializedVarS
     {
         return uninitializedUses;
     }
+    
+    /**
+     * Run the dataflow analysis using chaotic iteration (worklist algorithm).
+     * After this method returns, inStates and outStates contain the fixed-point solution.
+     */
+    @Override
+    public void analyze()
+    {
+        // Run the standard analysis first to compute fixed points
+        super.analyze();
+        
+        // After fixed point is reached, do one final pass to collect all uninitialized uses
+        // based on the final IN states.
+        uninitializedUses.clear(); // Clear any intermediate results
+        int n = cfg.size();
+        for (int i = 0; i < n; i++)
+        {
+            // We need to run transfer one last time on the final IN state to catch uses
+            // We use a copy so we don't modify the stored IN state (though it shouldn't matter at this point)
+            UninitializedVarState state = inStates.get(i).copy();
+            transfer(cfg.getCommand(i), state);
+        }
+    }
 }
-
