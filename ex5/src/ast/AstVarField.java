@@ -1,17 +1,18 @@
 package ast;
 
 import types.*;
+import ir.*;
+import temp.*;
 
-public class AstVarField extends AstVar
-{
+public class AstVarField extends AstVar {
 	public AstVar var;
 	public String fieldName;
-	
+	TypeClass varClassType = null; // saved from semantMe for irMe
+
 	/******************/
 	/* CONSTRUCTOR(S) */
 	/******************/
-	public AstVarField(AstVar var, String fieldName, int lineNumber)
-	{
+	public AstVarField(AstVar var, String fieldName, int lineNumber) {
 		/******************************/
 		/* SET A UNIQUE SERIAL NUMBER */
 		/******************************/
@@ -20,7 +21,8 @@ public class AstVarField extends AstVar
 		/***************************************/
 		/* PRINT CORRESPONDING DERIVATION RULE */
 		/***************************************/
-		// System.out.format("====================== var -> var DOT ID( %s )\n",fieldName);
+		// System.out.format("====================== var -> var DOT ID( %s
+		// )\n",fieldName);
 
 		/*******************************/
 		/* COPY INPUT DATA MEMBERS ... */
@@ -33,8 +35,7 @@ public class AstVarField extends AstVar
 	/*************************************************/
 	/* The printing message for a field var AST node */
 	/*************************************************/
-	public void printMe()
-	{
+	public void printMe() {
 		/*********************************/
 		/* AST NODE TYPE = AST FIELD VAR */
 		/*********************************/
@@ -43,73 +44,90 @@ public class AstVarField extends AstVar
 		/**********************************************/
 		/* RECURSIVELY PRINT VAR, then FIELD NAME ... */
 		/**********************************************/
-		if (var != null) var.printMe();
-		System.out.format("FIELD NAME( %s )\n",fieldName);
+		if (var != null)
+			var.printMe();
+		System.out.format("FIELD NAME( %s )\n", fieldName);
 
 		/***************************************/
 		/* PRINT Node to AST GRAPHVIZ DOT file */
 		/***************************************/
 		AstGraphviz.getInstance().logNode(
 				serialNumber,
-			String.format("FIELD\nVAR\n...->%s",fieldName));
-		
+				String.format("FIELD\nVAR\n...->%s", fieldName));
+
 		/****************************************/
 		/* PRINT Edges to AST GRAPHVIZ DOT file */
 		/****************************************/
-		if (var != null) AstGraphviz.getInstance().logEdge(serialNumber,var.serialNumber);
+		if (var != null)
+			AstGraphviz.getInstance().logEdge(serialNumber, var.serialNumber);
 	}
 
 	/********************************************************/
-	/* Semantic analysis for field access (var.field)      */
-	/* Looks up the field in the class hierarchy           */
+	/* Semantic analysis for field access (var.field) */
+	/* Looks up the field in the class hierarchy */
 	/********************************************************/
-	public Type semantMe() throws SemanticException
-	{
+	public Type semantMe() throws SemanticException {
 		Type t = null;
 		TypeClass tc = null;
 
 		/******************************/
 		/* [1] Recursively semant var */
 		/******************************/
-		if (var != null) t = var.semantMe();
+		if (var != null)
+			t = var.semantMe();
 
 		/****************************/
-		/* [2] Check for null type  */
+		/* [2] Check for null type */
 		/****************************/
-		if (t == null)
-		{
+		if (t == null) {
 			throw new SemanticException("variable has no type", lineNumber);
 		}
 
 		/*********************************/
 		/* [3] Make sure type is a class */
 		/*********************************/
-		if (!t.isClass())
-		{
+		if (!t.isClass()) {
 			throw new SemanticException("cannot access field " + fieldName + " of non-class variable", lineNumber);
 		}
 
 		tc = (TypeClass) t;
+		varClassType = tc; // save for irMe()
 
 		/**************************************************************/
 		/* [4] Look for fieldName in class and parent class hierarchy */
 		/**************************************************************/
 		Type member = TypeUtils.findMemberInClassHierarchy(tc, fieldName);
 
-		if (member == null)
-		{
+		if (member == null) {
 			throw new SemanticException("field " + fieldName + " does not exist in class " + tc.name, lineNumber);
 		}
 
 		/*********************************************/
-		/* [5] Return the type of the member        */
+		/* [5] Return the type of the member */
 		/*********************************************/
 		// If it's a field, return the field type
-		if (member instanceof TypeField)
-		{
+		if (member instanceof TypeField) {
 			return ((TypeField) member).fieldType;
 		}
 		// If it's a method, return the function type
 		return member;
+	}
+
+	/********************************************************/
+	/* IR generation for field access */
+	/* Loads base, computes field offset, emits field load */
+	/********************************************************/
+	public Temp irMe() {
+		// Load the object base address
+		Temp base = var.irMe();
+
+		// Compute field byte offset
+		int offset = ClassLayout.getFieldOffset(varClassType, fieldName);
+
+		// Load field value
+		Temp dst = TempFactory.getInstance().getFreshTemp();
+		Ir.getInstance().AddIrCommand(new IrCommandFieldGet(dst, base, offset));
+
+		return dst;
 	}
 }

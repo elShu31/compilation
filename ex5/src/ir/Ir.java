@@ -51,7 +51,7 @@ public class Ir {
 	public void mipsMe() {
 		// Pass 1: Gather all allocations (which now just add to set for globals)
 		for (IrCommand cmd : commands) {
-			if (cmd instanceof IrCommandAllocate) {
+			if (cmd instanceof IrCommandAllocate || cmd instanceof IrCommandVTable) {
 				cmd.mipsMe();
 			}
 		}
@@ -61,7 +61,7 @@ public class Ir {
 
 		// Pass 3: Emit all actual .text commands (functions and main code)
 		for (IrCommand cmd : commands) {
-			if (!(cmd instanceof IrCommandAllocate)) {
+			if (!(cmd instanceof IrCommandAllocate || cmd instanceof IrCommandVTable)) {
 				cmd.mipsMe();
 			}
 		}

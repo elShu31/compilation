@@ -55,6 +55,12 @@ public class AstVarSimple extends AstVar {
 				String.format("SIMPLE\nVAR\n(%s)", name));
 	}
 
+	/*************************************************/
+	/* Additional state for implicit fields (this.*) */
+	/*************************************************/
+	public boolean isImplicitField = false;
+	public TypeClass enclosingClass = null;
+
 	/********************************************************/
 	/* Semantic analysis for simple variable */
 	/* Looks up the variable name in the symbol table */
@@ -67,12 +73,17 @@ public class AstVarSimple extends AstVar {
 		}
 
 		/*************************************************/
-		/* Capture the scope offset while scope is active */
+		/* Capture the scope offset */
 		/*************************************************/
 		this.scopeOffset = SymbolTable.getInstance().getScopeOffset(name);
 
-		// If it's a field, return the field's type, not the TypeField wrapper
+		// If it's a field, it must be an implicit access to 'this'
 		if (t instanceof TypeField) {
+			this.isImplicitField = true;
+			Type thisType = SymbolTable.getInstance().find("this");
+			if (thisType instanceof TypeClass) {
+				this.enclosingClass = (TypeClass) thisType;
+			}
 			return ((TypeField) t).fieldType;
 		}
 
@@ -86,7 +97,19 @@ public class AstVarSimple extends AstVar {
 	public Temp irMe() {
 		Temp dst = TempFactory.getInstance().getFreshTemp();
 
-		if (FunctionContext.isInFunction()) {
+		if (isImplicitField) {
+			// 1. Load implicit "this" pointer
+			Temp thisTemp = TempFactory.getInstance().getFreshTemp();
+			VarId.Kind kind = FunctionContext.getCurrent().getKind("this");
+			int fpOffset = FunctionContext.getCurrent().getFpOffset("this");
+			// The scope offset for "this" might not be needed for local stack access, but
+			// we pass -1 or 1 depending.
+			Ir.getInstance().AddIrCommand(new IrCommandLoad(thisTemp, "this", -1, kind, fpOffset));
+
+			// 2. Load field from "this"
+			int fieldOffset = ClassLayout.getFieldOffset(enclosingClass, name);
+			Ir.getInstance().AddIrCommand(new IrCommandFieldGet(dst, thisTemp, fieldOffset));
+		} else if (FunctionContext.isInFunction()) {
 			VarId.Kind kind = FunctionContext.getCurrent().getKind(name);
 			int fpOffset = FunctionContext.getCurrent().getFpOffset(name);
 			Ir.getInstance().AddIrCommand(new IrCommandLoad(dst, name, scopeOffset, kind, fpOffset));

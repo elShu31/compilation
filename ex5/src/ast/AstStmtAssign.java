@@ -111,7 +111,18 @@ public class AstStmtAssign extends AstStmt {
 				src = TempFactory.getInstance().getFreshTemp();
 			}
 
-			if (ir.FunctionContext.isInFunction()) {
+			if (((AstVarSimple) var).isImplicitField) {
+				AstVarSimple simpleVar = (AstVarSimple) var;
+				// 1. Load implicit "this" pointer
+				Temp thisTemp = TempFactory.getInstance().getFreshTemp();
+				ir.VarId.Kind kind = ir.FunctionContext.getCurrent().getKind("this");
+				int fpOffset = ir.FunctionContext.getCurrent().getFpOffset("this");
+				ir.Ir.getInstance().AddIrCommand(new ir.IrCommandLoad(thisTemp, "this", -1, kind, fpOffset));
+
+				// 2. Store to field on "this"
+				int fieldOffset = ir.ClassLayout.getFieldOffset(simpleVar.enclosingClass, simpleVar.name);
+				ir.Ir.getInstance().AddIrCommand(new ir.IrCommandFieldSet(thisTemp, fieldOffset, src));
+			} else if (ir.FunctionContext.isInFunction()) {
 				ir.VarId.Kind kind = ir.FunctionContext.getCurrent().getKind(varName);
 				int fpOffset = ir.FunctionContext.getCurrent().getFpOffset(varName);
 				ir.Ir.getInstance().AddIrCommand(
@@ -119,6 +130,28 @@ public class AstStmtAssign extends AstStmt {
 			} else {
 				ir.Ir.getInstance().AddIrCommand(new ir.IrCommandStore(varName, scopeOffset, src));
 			}
+		} else if (var instanceof AstVarSubscript) {
+			// arr[index] := exp
+			AstVarSubscript sub = (AstVarSubscript) var;
+			Temp base = sub.var.irMe(); // load array base address
+			Temp index = sub.subscript.irMe(); // evaluate index
+
+			if (src == null) {
+				src = TempFactory.getInstance().getFreshTemp();
+			}
+
+			ir.Ir.getInstance().AddIrCommand(new ir.IrCommandArraySet(base, index, src));
+		} else if (var instanceof AstVarField) {
+			// obj.field := exp
+			AstVarField field = (AstVarField) var;
+			Temp base = field.var.irMe(); // load object base address
+
+			if (src == null) {
+				src = TempFactory.getInstance().getFreshTemp();
+			}
+
+			int offset = ir.ClassLayout.getFieldOffset(field.varClassType, field.fieldName);
+			ir.Ir.getInstance().AddIrCommand(new ir.IrCommandFieldSet(base, offset, src));
 		}
 		return null;
 	}

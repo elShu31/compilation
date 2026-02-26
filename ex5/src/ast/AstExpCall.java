@@ -59,6 +59,13 @@ public class AstExpCall extends AstExp {
 	/* Handles: funcName(params) - function call */
 	/* var.funcName(params) - method call */
 	/********************************************************/
+	private TypeClass varClassType = null; // saved for irMe()
+
+	/********************************************************/
+	/* Semantic analysis for function/method call */
+	/* Handles: funcName(params) - function call */
+	/* var.funcName(params) - method call */
+	/********************************************************/
 	public Type semantMe() throws SemanticException {
 		Type funcType = null;
 		TypeFunction func = null;
@@ -80,6 +87,7 @@ public class AstExpCall extends AstExp {
 			}
 
 			TypeClass classType = (TypeClass) varType;
+			varClassType = classType; // save for irMe()
 
 			// Look for method in class hierarchy
 			funcType = TypeUtils.findMemberInClassHierarchy(classType, funcName);
@@ -164,14 +172,29 @@ public class AstExpCall extends AstExp {
 			}
 		}
 
-		if (funcName.equals("PrintInt")) {
-			// Backwards compatibility for the built-in PrintInt
+		if (var != null) {
+			// Method call (virtual dispatch)
+			Temp objBase = var.irMe();
+			int methodOffset = ClassLayout.getMethodOffset(varClassType, funcName);
+
 			t = TempFactory.getInstance().getFreshTemp();
-			Ir.getInstance().AddIrCommand(new IrCommandPrintInt(args.get(0)));
-			return t;
+			Ir.getInstance().AddIrCommand(new IrCommandVirtualCall(objBase, methodOffset, args, t));
 		} else {
-			t = TempFactory.getInstance().getFreshTemp();
-			Ir.getInstance().AddIrCommand(new IrCommandCall(funcName, args, t));
+			// Simple function call or built-ins
+			if (funcName.equals("PrintInt")) {
+				// Backwards compatibility for the built-in PrintInt
+				t = TempFactory.getInstance().getFreshTemp();
+				Ir.getInstance().AddIrCommand(new IrCommandPrintInt(args.get(0)));
+				return t;
+			} else if (funcName.equals("PrintString")) {
+				// Built-in PrintString
+				t = TempFactory.getInstance().getFreshTemp();
+				Ir.getInstance().AddIrCommand(new IrCommandPrintString(args.get(0)));
+				return t;
+			} else {
+				t = TempFactory.getInstance().getFreshTemp();
+				Ir.getInstance().AddIrCommand(new IrCommandCall(funcName, args, t));
+			}
 		}
 
 		return t;

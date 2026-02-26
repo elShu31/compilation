@@ -114,14 +114,36 @@ public class AstStmtAssignNew extends AstStmt {
 		if (newExp != null) {
 			Temp src = newExp.irMe();
 			if (var instanceof AstVarSimple) {
-				String varName = ((AstVarSimple) var).name;
-				int scopeOffset = ((AstVarSimple) var).getScopeOffset();
-
-				if (src == null) {
-					src = TempFactory.getInstance().getFreshTemp();
+				if (((AstVarSimple) var).isImplicitField) {
+					AstVarSimple simpleVar = (AstVarSimple) var;
+					Temp thisTemp = TempFactory.getInstance().getFreshTemp();
+					VarId.Kind kind = FunctionContext.getCurrent().getKind("this");
+					int fpOffset = FunctionContext.getCurrent().getFpOffset("this");
+					Ir.getInstance().AddIrCommand(new IrCommandLoad(thisTemp, "this", -1, kind, fpOffset));
+					int fieldOffset = ClassLayout.getFieldOffset(simpleVar.enclosingClass, simpleVar.name);
+					Ir.getInstance().AddIrCommand(new IrCommandFieldSet(thisTemp, fieldOffset, src));
+				} else {
+					String varName = ((AstVarSimple) var).name;
+					int scopeOffset = ((AstVarSimple) var).getScopeOffset();
+					if (FunctionContext.isInFunction()) {
+						VarId.Kind kind = FunctionContext.getCurrent().getKind(varName);
+						int fpOffset = FunctionContext.getCurrent().getFpOffset(varName);
+						Ir.getInstance().AddIrCommand(
+								new IrCommandStore(varName, scopeOffset, kind, fpOffset, src));
+					} else {
+						Ir.getInstance().AddIrCommand(new IrCommandStore(varName, scopeOffset, src));
+					}
 				}
-
-				Ir.getInstance().AddIrCommand(new IrCommandStore(varName, scopeOffset, src));
+			} else if (var instanceof AstVarSubscript) {
+				AstVarSubscript sub = (AstVarSubscript) var;
+				Temp base = sub.var.irMe();
+				Temp index = sub.subscript.irMe();
+				Ir.getInstance().AddIrCommand(new IrCommandArraySet(base, index, src));
+			} else if (var instanceof AstVarField) {
+				AstVarField field = (AstVarField) var;
+				Temp base = field.var.irMe();
+				int offset = ClassLayout.getFieldOffset(field.varClassType, field.fieldName);
+				Ir.getInstance().AddIrCommand(new IrCommandFieldSet(base, offset, src));
 			}
 		}
 		return null;

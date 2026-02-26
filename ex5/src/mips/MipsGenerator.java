@@ -21,10 +21,47 @@ public class MipsGenerator {
 	private PrintWriter fileWriter;
 	private java.util.Set<String> allocatedGlobalVars = new java.util.HashSet<>();
 	private java.util.Map<String, String> stringConstants = new java.util.LinkedHashMap<>();
+	private int stringConstantCounter = 0;
+
+	public PrintWriter getFileWriter() {
+		return fileWriter;
+	}
+
+	/****************************************/
+	/* Register a string constant and */
+	/* return its label name */
+	/****************************************/
+	public String addStringConstant(String value) {
+		// Check if this exact string already has a label
+		for (java.util.Map.Entry<String, String> entry : stringConstants.entrySet()) {
+			if (entry.getValue().equals(value)) {
+				return entry.getKey();
+			}
+		}
+		String label = "string_const_" + (stringConstantCounter++);
+		stringConstants.put(label, value);
+		return label;
+	}
+
+	/****************************************/
+	/* Load address of a string constant */
+	/****************************************/
+	public void loadStringConstant(Temp dst, String label) {
+		int idx = dst.getSerialNumber();
+		fileWriter.format("\tla $t%d,%s\n", idx, label);
+	}
 
 	public void finalizeFile() {
 		fileWriter.print("\tli $v0,10\n");
 		fileWriter.print("\tsyscall\n");
+
+		fileWriter.print("error_null_ptr:\n");
+		fileWriter.print("\tla $a0, string_invalid_ptr_dref\n");
+		fileWriter.print("\tli $v0, 4\n");
+		fileWriter.print("\tsyscall\n");
+		fileWriter.print("\tli $v0, 10\n");
+		fileWriter.print("\tsyscall\n");
+
 		fileWriter.close();
 	}
 
@@ -43,6 +80,214 @@ public class MipsGenerator {
 		fileWriter.format("\tmove $a0,$t%d\n", idx);
 		fileWriter.format("\tli $v0,4\n");
 		fileWriter.format("\tsyscall\n");
+	}
+
+	/****************************************/
+	/* Allocate memory on heap via sbrk */
+	/****************************************/
+	public void malloc(Temp dst, Temp sizeBytes) {
+		int sizeIdx = sizeBytes.getSerialNumber();
+		int dstIdx = dst.getSerialNumber();
+		fileWriter.format("\tmove $a0,$t%d\n", sizeIdx);
+		fileWriter.format("\tli $v0,9\n");
+		fileWriter.format("\tsyscall\n");
+		fileWriter.format("\tmove $t%d,$v0\n", dstIdx);
+	}
+
+	/****************************************/
+	/* Store to array element */
+	/* base[(index+1)*4] := value */
+	/****************************************/
+	public void arrayStore(Temp base, Temp index, Temp value) {
+		int baseIdx = base.getSerialNumber();
+		int indexIdx = index.getSerialNumber();
+		int valueIdx = value.getSerialNumber();
+		fileWriter.format("\tbeq $t%d,$zero,error_null_ptr\n", baseIdx);
+		fileWriter.format("\taddu $v1,$t%d,1\n", indexIdx);
+		fileWriter.format("\tsll $v1,$v1,2\n");
+		fileWriter.format("\taddu $v1,$t%d,$v1\n", baseIdx);
+		// Bounds check: index >= 0
+		String okLower = ir.IrCommand.getFreshLabel("ArrOkLo");
+		fileWriter.format("\tbge $t%d,$zero,%s\n", indexIdx, okLower);
+		fileWriter.format("\tla $a0,string_access_violation\n");
+		fileWriter.format("\tli $v0,4\n");
+		fileWriter.format("\tsyscall\n");
+		fileWriter.format("\tli $v0,10\n");
+		fileWriter.format("\tsyscall\n");
+		fileWriter.format("%s:\n", okLower);
+		// Bounds check: index < length
+		String okUpper = ir.IrCommand.getFreshLabel("ArrOkHi");
+		fileWriter.format("\tlw $a0,0($t%d)\n", baseIdx);
+		fileWriter.format("\tblt $t%d,$a0,%s\n", indexIdx, okUpper);
+		fileWriter.format("\tla $a0,string_access_violation\n");
+		fileWriter.format("\tli $v0,4\n");
+		fileWriter.format("\tsyscall\n");
+		fileWriter.format("\tli $v0,10\n");
+		fileWriter.format("\tsyscall\n");
+		fileWriter.format("%s:\n", okUpper);
+		fileWriter.format("\tsw $t%d,0($v1)\n", valueIdx);
+	}
+
+	/****************************************/
+	/* Load from array element */
+	/* dst := base[(index+1)*4] */
+	/****************************************/
+	public void arrayLoad(Temp dst, Temp base, Temp index) {
+		int dstIdx = dst.getSerialNumber();
+		int baseIdx = base.getSerialNumber();
+		int indexIdx = index.getSerialNumber();
+		fileWriter.format("\tbeq $t%d,$zero,error_null_ptr\n", baseIdx);
+		fileWriter.format("\taddu $v1,$t%d,1\n", indexIdx);
+		fileWriter.format("\tsll $v1,$v1,2\n");
+		fileWriter.format("\taddu $v1,$t%d,$v1\n", baseIdx);
+		// Bounds check: index >= 0
+		String okLower = ir.IrCommand.getFreshLabel("ArrOkLo");
+		fileWriter.format("\tbge $t%d,$zero,%s\n", indexIdx, okLower);
+		fileWriter.format("\tla $a0,string_access_violation\n");
+		fileWriter.format("\tli $v0,4\n");
+		fileWriter.format("\tsyscall\n");
+		fileWriter.format("\tli $v0,10\n");
+		fileWriter.format("\tsyscall\n");
+		fileWriter.format("%s:\n", okLower);
+		// Bounds check: index < length
+		String okUpper = ir.IrCommand.getFreshLabel("ArrOkHi");
+		fileWriter.format("\tlw $a0,0($t%d)\n", baseIdx);
+		fileWriter.format("\tblt $t%d,$a0,%s\n", indexIdx, okUpper);
+		fileWriter.format("\tla $a0,string_access_violation\n");
+		fileWriter.format("\tli $v0,4\n");
+		fileWriter.format("\tsyscall\n");
+		fileWriter.format("\tli $v0,10\n");
+		fileWriter.format("\tsyscall\n");
+		fileWriter.format("%s:\n", okUpper);
+		fileWriter.format("\tlw $t%d,0($v1)\n", dstIdx);
+	}
+
+	/****************************************/
+	/* Store length at array base addr */
+	/* base[0] := length */
+	/****************************************/
+	public void storeArrayLength(Temp base, Temp length) {
+		int baseIdx = base.getSerialNumber();
+		int lengthIdx = length.getSerialNumber();
+		fileWriter.format("\tsw $t%d,0($t%d)\n", lengthIdx, baseIdx);
+	}
+
+	/****************************************/
+	/* String concatenation */
+	/* dst = str1 + str2 */
+	/* Computes lengths, allocates buffer, */
+	/* copies both strings */
+	/****************************************/
+	public void stringConcat(Temp dst, Temp str1, Temp str2) {
+		int dstIdx = dst.getSerialNumber();
+		int s1Idx = str1.getSerialNumber();
+		int s2Idx = str2.getSerialNumber();
+
+		// Use $a1 = len1, $a2 = len2, $a3 = temp for copy
+		// $v1 = pointer during copy
+
+		// --- Compute strlen(str1) -> $a1 ---
+		String len1Start = ir.IrCommand.getFreshLabel("StrLen1");
+		String len1End = ir.IrCommand.getFreshLabel("StrLen1End");
+		fileWriter.format("\tli $a1,0\n");
+		fileWriter.format("\tmove $v1,$t%d\n", s1Idx);
+		fileWriter.format("%s:\n", len1Start);
+		fileWriter.format("\tlb $a3,0($v1)\n");
+		fileWriter.format("\tbeq $a3,$zero,%s\n", len1End);
+		fileWriter.format("\taddu $a1,$a1,1\n");
+		fileWriter.format("\taddu $v1,$v1,1\n");
+		fileWriter.format("\tj %s\n", len1Start);
+		fileWriter.format("%s:\n", len1End);
+
+		// --- Compute strlen(str2) -> $a2 ---
+		String len2Start = ir.IrCommand.getFreshLabel("StrLen2");
+		String len2End = ir.IrCommand.getFreshLabel("StrLen2End");
+		fileWriter.format("\tli $a2,0\n");
+		fileWriter.format("\tmove $v1,$t%d\n", s2Idx);
+		fileWriter.format("%s:\n", len2Start);
+		fileWriter.format("\tlb $a3,0($v1)\n");
+		fileWriter.format("\tbeq $a3,$zero,%s\n", len2End);
+		fileWriter.format("\taddu $a2,$a2,1\n");
+		fileWriter.format("\taddu $v1,$v1,1\n");
+		fileWriter.format("\tj %s\n", len2Start);
+		fileWriter.format("%s:\n", len2End);
+
+		// --- Allocate len1 + len2 + 1 bytes via sbrk ---
+		fileWriter.format("\taddu $a0,$a1,$a2\n");
+		fileWriter.format("\taddu $a0,$a0,1\n"); // +1 for null terminator
+		fileWriter.format("\tli $v0,9\n");
+		fileWriter.format("\tsyscall\n");
+		// $v0 now has the new buffer pointer
+		fileWriter.format("\tmove $t%d,$v0\n", dstIdx);
+
+		// --- Copy str1 into new buffer ---
+		String cp1Start = ir.IrCommand.getFreshLabel("StrCp1");
+		String cp1End = ir.IrCommand.getFreshLabel("StrCp1End");
+		fileWriter.format("\tmove $v1,$t%d\n", s1Idx); // src = str1
+		fileWriter.format("\tmove $a0,$t%d\n", dstIdx); // dest = new buffer
+		fileWriter.format("%s:\n", cp1Start);
+		fileWriter.format("\tlb $a3,0($v1)\n");
+		fileWriter.format("\tbeq $a3,$zero,%s\n", cp1End);
+		fileWriter.format("\tsb $a3,0($a0)\n");
+		fileWriter.format("\taddu $v1,$v1,1\n");
+		fileWriter.format("\taddu $a0,$a0,1\n");
+		fileWriter.format("\tj %s\n", cp1Start);
+		fileWriter.format("%s:\n", cp1End);
+
+		// --- Copy str2 into buffer (continuing from where str1 ended) ---
+		String cp2Start = ir.IrCommand.getFreshLabel("StrCp2");
+		String cp2End = ir.IrCommand.getFreshLabel("StrCp2End");
+		fileWriter.format("\tmove $v1,$t%d\n", s2Idx); // src = str2
+		// $a0 already points to end of str1 in buffer
+		fileWriter.format("%s:\n", cp2Start);
+		fileWriter.format("\tlb $a3,0($v1)\n");
+		fileWriter.format("\tbeq $a3,$zero,%s\n", cp2End);
+		fileWriter.format("\tsb $a3,0($a0)\n");
+		fileWriter.format("\taddu $v1,$v1,1\n");
+		fileWriter.format("\taddu $a0,$a0,1\n");
+		fileWriter.format("\tj %s\n", cp2Start);
+		fileWriter.format("%s:\n", cp2End);
+
+		// --- Null terminate ---
+		fileWriter.format("\tsb $zero,0($a0)\n");
+	}
+
+	/****************************************/
+	/* Load a field from an object */
+	/* dst := base[byteOffset] */
+	/****************************************/
+	public void fieldLoad(Temp dst, Temp base, int byteOffset) {
+		int dstIdx = dst.getSerialNumber();
+		int baseIdx = base.getSerialNumber();
+		// Null pointer check
+		String ok = ir.IrCommand.getFreshLabel("NullOk");
+		fileWriter.format("\tbne $t%d,$zero,%s\n", baseIdx, ok);
+		fileWriter.format("\tla $a0,string_invalid_ptr_dref\n");
+		fileWriter.format("\tli $v0,4\n");
+		fileWriter.format("\tsyscall\n");
+		fileWriter.format("\tli $v0,10\n");
+		fileWriter.format("\tsyscall\n");
+		fileWriter.format("%s:\n", ok);
+		fileWriter.format("\tlw $t%d,%d($t%d)\n", dstIdx, byteOffset, baseIdx);
+	}
+
+	/****************************************/
+	/* Store a field in an object */
+	/* base[byteOffset] := src */
+	/****************************************/
+	public void fieldStore(Temp base, int byteOffset, Temp src) {
+		int baseIdx = base.getSerialNumber();
+		int srcIdx = src.getSerialNumber();
+		// Null pointer check
+		String ok = ir.IrCommand.getFreshLabel("NullOk");
+		fileWriter.format("\tbne $t%d,$zero,%s\n", baseIdx, ok);
+		fileWriter.format("\tla $a0,string_invalid_ptr_dref\n");
+		fileWriter.format("\tli $v0,4\n");
+		fileWriter.format("\tsyscall\n");
+		fileWriter.format("\tli $v0,10\n");
+		fileWriter.format("\tsyscall\n");
+		fileWriter.format("%s:\n", ok);
+		fileWriter.format("\tsw $t%d,%d($t%d)\n", srcIdx, byteOffset, baseIdx);
 	}
 
 	/****************************************/
@@ -65,6 +310,19 @@ public class MipsGenerator {
 		}
 		for (java.util.Map.Entry<String, String> entry : stringConstants.entrySet()) {
 			fileWriter.format("\t%s: .asciiz %s\n", entry.getKey(), entry.getValue());
+		}
+		fileWriter.print("\n");
+		fileWriter.print("\t.align 2\n");
+		for (java.util.Map.Entry<String, java.util.List<String>> entry : vtables.entrySet()) {
+			fileWriter.format("vtable_%s:\n", entry.getKey());
+			if (entry.getValue().isEmpty()) {
+				fileWriter.print("\t.word 0\n");
+			} else {
+				for (String method : entry.getValue()) {
+					fileWriter.format("\t.word %s\n", method);
+				}
+			}
+			fileWriter.print("\n");
 		}
 		// Emit .text directive after .data section
 		fileWriter.print(".text\n");
@@ -259,25 +517,74 @@ public class MipsGenerator {
 	/* Push args right-to-left on stack, */
 	/* jal, pop args, get return in $v0 */
 	/*******************************************/
-	public void callFunc(String funcName, java.util.List<Temp> args, Temp retDst) {
-		// Push arguments right-to-left onto the stack
+	public void callFunc(String name, java.util.List<Temp> args, Temp retDst) {
+		// Save caller-save registers (not implemented fully here, assuming simple reg
+		// alloc)
+
+		// Push arguments to stack (right-to-left)
 		for (int i = args.size() - 1; i >= 0; i--) {
-			int tempId = args.get(i).getSerialNumber();
-			fileWriter.format("\tsubu $sp,$sp,4\n");
-			fileWriter.format("\tsw $t%d,0($sp)\n", tempId);
+			int argIdx = args.get(i).getSerialNumber();
+			fileWriter.format("\t\t# push arg %d\n", i);
+			fileWriter.format("\tsub $sp,$sp,4\n");
+			fileWriter.format("\tsw $t%d,0($sp)\n", argIdx);
 		}
 
-		// Jump and link
-		fileWriter.format("\tjal %s\n", funcName);
+		// Call function
+		fileWriter.format("\tjal %s\n", name);
 
 		// Pop arguments from stack
 		if (args.size() > 0) {
-			fileWriter.format("\taddu $sp,$sp,%d\n", args.size() * WORD_SIZE);
+			fileWriter.format("\tadd $sp,$sp,%d\n", args.size() * 4);
 		}
 
-		// Store result
+		// Move return value from $v0 to destination register
 		if (retDst != null) {
-			fileWriter.format("\tmove $t%d,$v0\n", retDst.getSerialNumber());
+			int retIdx = retDst.getSerialNumber();
+			fileWriter.format("\tmove $t%d,$v0\n", retIdx);
+		}
+	}
+
+	public void virtualCall(Temp objBase, int methodOffset, java.util.List<Temp> args, Temp retDst) {
+		int baseIdx = objBase.getSerialNumber();
+
+		// Null check object
+		fileWriter.format("\t\t# virtual method call, null check\n");
+		fileWriter.format("\tbeq $t%d,$zero,error_null_ptr\n", baseIdx);
+
+		// Push arguments to stack (right-to-left)
+		// Last argument first. Object base is technically the first (implicit) argument
+		// 'this'.
+		for (int i = args.size() - 1; i >= 0; i--) {
+			int argIdx = args.get(i).getSerialNumber();
+			fileWriter.format("\t\t# push arg %d\n", i);
+			fileWriter.format("\tsub $sp,$sp,4\n");
+			fileWriter.format("\tsw $t%d,0($sp)\n", argIdx);
+		}
+
+		// Push 'this' as the first argument
+		fileWriter.format("\t\t# push 'this'\n");
+		fileWriter.format("\tsub $sp,$sp,4\n");
+		fileWriter.format("\tsw $t%d,0($sp)\n", baseIdx);
+
+		// Load vtable address from objBase[0]
+		fileWriter.format("\t\t# load vtable ptr\n");
+		fileWriter.format("\tlw $a0,0($t%d)\n", baseIdx);
+
+		// Load method address from vtable[methodOffset]
+		fileWriter.format("\t\t# load method address\n");
+		fileWriter.format("\tlw $t0,%d($a0)\n", methodOffset);
+
+		// Call function via register
+		fileWriter.format("\tjalr $t0\n");
+
+		// Pop arguments from stack ('this' + explicit args)
+		int totalArgs = args.size() + 1;
+		fileWriter.format("\tadd $sp,$sp,%d\n", totalArgs * 4);
+
+		// Move return value from $v0 to destination register
+		if (retDst != null) {
+			int retIdx = retDst.getSerialNumber();
+			fileWriter.format("\tmove $t%d,$v0\n", retIdx);
 		}
 	}
 
@@ -312,5 +619,11 @@ public class MipsGenerator {
 			init("./output/MIPS.txt");
 		}
 		return instance;
+	}
+
+	private java.util.Map<String, java.util.List<String>> vtables = new java.util.LinkedHashMap<>();
+
+	public void emitVTable(String className, java.util.List<String> methods) {
+		vtables.put(className, methods);
 	}
 }

@@ -10,6 +10,7 @@ public class AstDecFunc extends AstNode {
 	public String funcName;
 	public AstParametersList params;
 	public AstStmtList body;
+	public TypeClass enclosingClass = null;
 
 	public AstDecFunc(AstType returnType, String funcName, AstParametersList params, AstStmtList body, int lineNumber) {
 		serialNumber = AstNode.getFreshSerialNumber();
@@ -87,6 +88,10 @@ public class AstDecFunc extends AstNode {
 		/****************************/
 		SymbolTable.getInstance().beginScope();
 
+		if (enclosingClass != null) {
+			SymbolTable.getInstance().enter("this", enclosingClass);
+		}
+
 		/*******************************************************/
 		/* [3.5] Set current function return type for return */
 		/* statement validation */
@@ -150,6 +155,8 @@ public class AstDecFunc extends AstNode {
 	/****************************************/
 	private int countParams() {
 		int count = 0;
+		if (enclosingClass != null)
+			count++;
 		for (AstParametersList it = params; it != null; it = it.tail) {
 			count++;
 		}
@@ -179,6 +186,10 @@ public class AstDecFunc extends AstNode {
 		/* +8($fp), second at +12($fp), etc. */
 		/****************************************/
 		int paramIndex = 0;
+		if (enclosingClass != null) {
+			FunctionContext.getCurrent().addParam("this", paramIndex);
+			paramIndex++;
+		}
 		for (AstParametersList it = params; it != null; it = it.tail) {
 			FunctionContext.getCurrent().addParam(it.head.id, paramIndex);
 			paramIndex++;

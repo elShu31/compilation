@@ -56,45 +56,49 @@ public class Main {
 			ast.semantMe();
 
 			/**********************/
-			/* [8] Ir the AST ... */
+			/* [8] Init MIPS generator with user's output file */
+			/**********************/
+			MipsGenerator.init(outputFileName);
+
+			/**********************/
+			/* [9] Ir the AST ... */
 			/**********************/
 			ast.irMe();
 
 			/****************************/
-			/* [9] Build the CFG ... */
+			/* [10] Build the CFG ... */
 			/****************************/
 			CFG cfg = new CFG(Ir.getInstance().getCommands());
 
 			/****************************************/
-			/* [10] Run Liveness Analysis */
+			/* [11] Run Liveness Analysis */
 			/****************************************/
 			LivenessAnalysis liveness = new LivenessAnalysis(cfg);
 			liveness.analyze();
 
 			/****************************************/
-			/* [11] Register Allocation */
+			/* [12] Register Allocation */
 			/****************************************/
 			InterferenceGraph ig = new InterferenceGraph(cfg, liveness);
 			RegisterAllocator.allocate(ig);
 
 			/***********************/
-			/* [12] MIPS the Ir ... */
+			/* [13] MIPS the Ir ... */
 			/***********************/
-			MipsGenerator.init(outputFileName);
 			Ir.getInstance().mipsMe();
 
 			/**************************************/
-			/* [10] Finalize AST GRAPHIZ DOT file */
+			/* [14] Finalize AST GRAPHIZ DOT file */
 			/**************************************/
 			AstGraphviz.getInstance().finalizeFile();
 
 			/***************************/
-			/* [11] Finalize MIPS file */
+			/* [15] Finalize MIPS file */
 			/***************************/
 			MipsGenerator.getInstance().finalizeFile();
 
 			/**************************/
-			/* [12] Close output file */
+			/* [16] Close output file */
 			/**************************/
 			fileWriter.close();
 		}

@@ -9,6 +9,7 @@ public class AstExpBinop extends AstExp {
 	BinOp op;
 	public AstExp left;
 	public AstExp right;
+	private Type resultType = null; // saved from semantMe for irMe
 
 	/******************/
 	/* CONSTRUCTOR(S) */
@@ -93,8 +94,10 @@ public class AstExpBinop extends AstExp {
 			case PLUS:
 				// Plus operator: + can be used for int+int OR string+string
 				if (t1 == TypeInt.getInstance() && t2 == TypeInt.getInstance()) {
+					resultType = TypeInt.getInstance();
 					return TypeInt.getInstance();
 				} else if (t1 == TypeString.getInstance() && t2 == TypeString.getInstance()) {
+					resultType = TypeString.getInstance();
 					return TypeString.getInstance();
 				} else {
 					throw new SemanticException("+ operator requires both operands to be int or both to be string",
@@ -218,7 +221,11 @@ public class AstExpBinop extends AstExp {
 
 		switch (op) {
 			case PLUS:
-				Ir.getInstance().AddIrCommand(new IrCommandBinopAddIntegers(dst, t1, t2));
+				if (resultType == TypeString.getInstance()) {
+					Ir.getInstance().AddIrCommand(new IrCommandStringConcat(dst, t1, t2));
+				} else {
+					Ir.getInstance().AddIrCommand(new IrCommandBinopAddIntegers(dst, t1, t2));
+				}
 				break;
 
 			case MINUS:
