@@ -27,6 +27,7 @@ public class IrCommandAllocate extends IrCommand {
 		this.varId = new VarId(varName, scopeOffset);
 	}
 
+	@Override
 	public void mipsMe() {
 		MipsGenerator.getInstance().allocate(varId.name);
 	}

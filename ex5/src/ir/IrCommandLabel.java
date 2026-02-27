@@ -18,4 +18,9 @@ public class IrCommandLabel extends IrCommand {
 	public IrCommandLabel(String labelName) {
 		this.labelName = labelName;
 	}
+
+	@Override
+	public void mipsMe() {
+		MipsGenerator.getInstance().label(labelName);
+	}
 }

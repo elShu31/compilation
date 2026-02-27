@@ -19,6 +19,7 @@ public class IrCommandJumpLabel extends IrCommand {
 		this.labelName = labelName;
 	}
 
+	@Override
 	public void mipsMe() {
 		MipsGenerator.getInstance().jump(labelName);
 	}

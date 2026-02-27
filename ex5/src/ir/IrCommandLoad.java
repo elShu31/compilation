@@ -31,6 +31,7 @@ public class IrCommandLoad extends IrCommand {
 		this.varId = new VarId(varName, scopeOffset);
 	}
 
+	@Override
 	public void mipsMe() {
 		MipsGenerator.getInstance().load(dst, varId.name);
 	}

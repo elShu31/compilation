@@ -24,6 +24,7 @@ public class IrCommandBinopMulIntegers extends IrCommand {
 		this.t2 = t2;
 	}
 
+	@Override
 	public void mipsMe() {
 		MipsGenerator.getInstance().mul(dst, t1, t2);
 	}

@@ -24,6 +24,7 @@ public class IrCommandBinopEqIntegers extends IrCommand {
 		this.t2 = t2;
 	}
 
+	@Override
 	public void mipsMe() {
 		/*******************************/
 		/* [1] Allocate 3 fresh labels */

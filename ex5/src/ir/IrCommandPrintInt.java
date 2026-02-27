@@ -20,6 +20,7 @@ public class IrCommandPrintInt extends IrCommand {
 		this.t = t;
 	}
 
+	@Override
 	public void mipsMe() {
 		MipsGenerator.getInstance().printInt(t);
 	}

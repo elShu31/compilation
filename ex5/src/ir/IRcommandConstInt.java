@@ -22,6 +22,7 @@ public class IRcommandConstInt extends IrCommand {
 		this.value = value;
 	}
 
+	@Override
 	public void mipsMe() {
 		MipsGenerator.getInstance().li(t, value);
 	}
