@@ -10,13 +10,12 @@ package ir;
 /*******************/
 /* PROJECT IMPORTS */
 /*******************/
+import mips.*;
 
-public class IrCommandJumpLabel extends IrCommand
-{
+public class IrCommandJumpLabel extends IrCommand {
 	public String labelName;
 
-	public IrCommandJumpLabel(String labelName)
-	{
+	public IrCommandJumpLabel(String labelName) {
 		this.labelName = labelName;
 	}
 }

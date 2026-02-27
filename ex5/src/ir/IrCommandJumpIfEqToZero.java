@@ -11,15 +11,14 @@ package ir;
 /* PROJECT IMPORTS */
 /*******************/
 import temp.*;
+import mips.*;
 
-public class IrCommandJumpIfEqToZero extends IrCommand
-{
+public class IrCommandJumpIfEqToZero extends IrCommand {
 	public Temp t;
 	public String labelName;
 
-	public IrCommandJumpIfEqToZero(Temp t, String labelName)
-	{
-		this.t          = t;
+	public IrCommandJumpIfEqToZero(Temp t, String labelName) {
+		this.t = t;
 		this.labelName = labelName;
 	}
 }

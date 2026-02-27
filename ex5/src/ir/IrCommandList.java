@@ -10,14 +10,13 @@ package ir;
 /*******************/
 /* PROJECT IMPORTS */
 /*******************/
+import mips.*;
 
-public class IrCommandList
-{
+public class IrCommandList {
 	public IrCommand head;
 	public IrCommandList tail;
 
-	IrCommandList(IrCommand head, IrCommandList tail)
-	{
+	IrCommandList(IrCommand head, IrCommandList tail) {
 		this.head = head;
 		this.tail = tail;
 	}

@@ -11,6 +11,7 @@ package ir;
 /* PROJECT IMPORTS */
 /*******************/
 import temp.*;
+import mips.*;
 
 public class IRcommandConstInt extends IrCommand
 {
@@ -21,5 +22,10 @@ public class IRcommandConstInt extends IrCommand
 	{
 		this.t = t;
 		this.value = value;
+	}
+
+	public void mipsMe()
+	{
+		MipsGenerator.getInstance().li(t,value);
 	}
 }

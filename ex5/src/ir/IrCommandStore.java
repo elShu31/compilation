@@ -11,25 +11,23 @@ package ir;
 /* PROJECT IMPORTS */
 /*******************/
 import temp.*;
+import mips.*;
 
-public class IrCommandStore extends IrCommand
-{
+public class IrCommandStore extends IrCommand {
 	public VarId varId;
 	public Temp src;
 
-	public IrCommandStore(VarId varId, Temp src)
-	{
-		this.src   = src;
+	public IrCommandStore(VarId varId, Temp src) {
+		this.src = src;
 		this.varId = varId;
 	}
 
 	/****************************************/
 	/* Convenience constructor for backward */
-	/* compatibility during transition      */
+	/* compatibility during transition */
 	/****************************************/
-	public IrCommandStore(String varName, int scopeOffset, Temp src)
-	{
-		this.src   = src;
+	public IrCommandStore(String varName, int scopeOffset, Temp src) {
+		this.src = src;
 		this.varId = new VarId(varName, scopeOffset);
 	}
 }

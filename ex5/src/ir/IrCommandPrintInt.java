@@ -11,13 +11,12 @@ package ir;
 /* PROJECT IMPORTS */
 /*******************/
 import temp.*;
+import mips.*;
 
-public class IrCommandPrintInt extends IrCommand
-{
+public class IrCommandPrintInt extends IrCommand {
 	public Temp t;
 
-	public IrCommandPrintInt(Temp t)
-	{
+	public IrCommandPrintInt(Temp t) {
 		this.t = t;
 	}
 }
