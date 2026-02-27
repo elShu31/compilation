@@ -4,50 +4,53 @@ import ir.*;
 import temp.*;
 import types.*;
 
-public abstract class AstNode
-{
+public abstract class AstNode {
 	/*******************************************/
 	/* The serial number is for debug purposes */
-	/* In particular, it can help in creating  */
-	/* a graphviz dot format of the AST ...    */
+	/* In particular, it can help in creating */
+	/* a graphviz dot format of the AST ... */
 	/*******************************************/
 	public int serialNumber;
 
 	/*******************************************/
-	/* Line number for error reporting         */
-	/* Used by SemanticException               */
+	/* Line number for error reporting */
+	/* Used by SemanticException */
 	/*******************************************/
 	public int lineNumber = -1;
 
 	/***********************************************/
 	/* The default message for an unknown AST node */
 	/***********************************************/
-	public void printMe()
-	{
+	public void printMe() {
 		System.out.print("AST NODE UNKNOWN\n");
 	}
 
 	/**********************************/
 	/* GET A UNIQUE SERIAL NUMBER ... */
 	/**********************************/
-	public static int getFreshSerialNumber()
-	{
+	public static int getFreshSerialNumber() {
 		return AstNodeSerialNumber.getFresh();
 	}
 
 	/***********************************************/
 	/* The default semantic action for an AST node */
 	/***********************************************/
-	public Type semantMe() throws SemanticException
-	{
+	public Type semantMe() throws SemanticException {
 		return null;
 	}
 
 	/*****************************************/
 	/* The default IR action for an AST node */
 	/*****************************************/
-	public Temp irMe()
-	{
+	public Temp irMe() {
 		return null;
+	}
+
+	/*********************************************************/
+	/* Recursively count local variable declarations */
+	/* Used to determine stack size needed for a function. */
+	/*********************************************************/
+	public int countLocalVars() {
+		return 0;
 	}
 }

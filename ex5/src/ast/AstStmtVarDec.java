@@ -4,15 +4,13 @@ import ir.*;
 import temp.*;
 import types.*;
 
-public class AstStmtVarDec extends AstStmt
-{
+public class AstStmtVarDec extends AstStmt {
 	public AstDecVar varDec;
 
 	/*******************/
-	/*  CONSTRUCTOR(S) */
+	/* CONSTRUCTOR(S) */
 	/*******************/
-	public AstStmtVarDec(AstDecVar varDec, int lineNumber)
-	{
+	public AstStmtVarDec(AstDecVar varDec, int lineNumber) {
 		serialNumber = AstNodeSerialNumber.getFresh();
 		// System.out.print("====================== stmt -> varDec\n");
 		this.varDec = varDec;
@@ -22,24 +20,28 @@ public class AstStmtVarDec extends AstStmt
 	/********************************************************/
 	/* The printing message for a var dec statement node */
 	/********************************************************/
-	public void printMe()
-	{
+	public void printMe() {
 		System.out.print("AST NODE VAR DEC STMT\n");
 
-		if (varDec != null) varDec.printMe();
+		if (varDec != null)
+			varDec.printMe();
 
 		AstGraphviz.getInstance().logNode(serialNumber, "VAR DEC\nSTMT");
-		
-		if (varDec != null) AstGraphviz.getInstance().logEdge(serialNumber, varDec.serialNumber);
+
+		if (varDec != null)
+			AstGraphviz.getInstance().logEdge(serialNumber, varDec.serialNumber);
 	}
 
-	public Type semantMe() throws SemanticException
-	{
+	public Type semantMe() throws SemanticException {
 		return varDec.semantMe();
 	}
 
-	public Temp irMe() { 
-		return varDec.irMe(); 
+	public Temp irMe() {
+		return varDec.irMe();
+	}
+
+	@Override
+	public int countLocalVars() {
+		return 1;
 	}
 }
-

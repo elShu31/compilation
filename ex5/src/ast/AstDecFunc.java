@@ -5,48 +5,49 @@ import temp.*;
 import types.*;
 import symboltable.*;
 
-public class AstDecFunc extends AstNode
-{
-    public AstType returnType;
-    public String funcName;
-    public AstParametersList params;   
-    public AstStmtList body;           
-    public AstDecFunc(AstType returnType, String funcName, AstParametersList params, AstStmtList body, int lineNumber)
-    {
-        serialNumber = AstNode.getFreshSerialNumber();
-        this.returnType = returnType;
-        this.funcName = funcName;
-        this.params = params;
-        this.body = body;
-        this.lineNumber = lineNumber;
-    }
+public class AstDecFunc extends AstNode {
+	public AstType returnType;
+	public String funcName;
+	public AstParametersList params;
+	public AstStmtList body;
 
-    @Override
-    public void printMe(){
-        System.out.format("AST DEC FUNC NODE: %s\n", funcName);
-        if (returnType != null) returnType.printMe();
-        if (params != null) params.printMe();
-        if (body != null) body.printMe();
-    }
+	public AstDecFunc(AstType returnType, String funcName, AstParametersList params, AstStmtList body, int lineNumber) {
+		serialNumber = AstNode.getFreshSerialNumber();
+		this.returnType = returnType;
+		this.funcName = funcName;
+		this.params = params;
+		this.body = body;
+		this.lineNumber = lineNumber;
+	}
 
-    public Type semantMe() throws SemanticException
-	{
+	@Override
+	public void printMe() {
+		System.out.format("AST DEC FUNC NODE: %s\n", funcName);
+		System.out.format("Local vars count: %d\n", countLocalVars());
+		if (returnType != null)
+			returnType.printMe();
+		if (params != null)
+			params.printMe();
+		if (body != null)
+			body.printMe();
+	}
+
+	public Type semantMe() throws SemanticException {
 		return semantMe(false);
 	}
 
 	/******************************************************************/
-	/* Semantic analysis with option to skip registration            */
-	/* isMethod = true when called from AstDecClass for methods      */
-	/* isMethod = false for standalone functions                     */
+	/* Semantic analysis with option to skip registration */
+	/* isMethod = true when called from AstDecClass for methods */
+	/* isMethod = false for standalone functions */
 	/******************************************************************/
-	public Type semantMe(boolean isMethod) throws SemanticException
-	{
+	public Type semantMe(boolean isMethod) throws SemanticException {
 		Type paramType;
 		Type retType = null;
 		TypeList paramTypeList = null;
 
 		/************************************/
-		/* [0a] Check for reserved keyword  */
+		/* [0a] Check for reserved keyword */
 		/************************************/
 		TypeUtils.checkNotReservedKeyword(funcName, lineNumber);
 
@@ -54,8 +55,7 @@ public class AstDecFunc extends AstNode
 		/* [0b] Check if return type exists */
 		/*******************/
 		retType = SymbolTable.getInstance().find(this.returnType.typeName);
-		if (retType == null)
-		{
+		if (retType == null) {
 			throw new SemanticException("non existing return type " + this.returnType.typeName, lineNumber);
 		}
 
@@ -63,8 +63,7 @@ public class AstDecFunc extends AstNode
 		/* [1] Check if function name already exists */
 		/* (Skip this check for methods - already validated by AstDecClass) */
 		/**************************************/
-		if (!isMethod && SymbolTable.getInstance().find(funcName) != null)
-		{
+		if (!isMethod && SymbolTable.getInstance().find(funcName) != null) {
 			throw new SemanticException("function " + funcName + " already exists", lineNumber);
 		}
 
@@ -75,13 +74,12 @@ public class AstDecFunc extends AstNode
 
 		/***************************************************/
 		/* [2.5] Enter the Function Type to the Symbol Table */
-		/* BEFORE opening scope to allow recursive calls    */
+		/* BEFORE opening scope to allow recursive calls */
 		/* and to make function visible to later declarations */
 		/* (Skip for methods - already entered by AstDecClass) */
 		/***************************************************/
 		TypeFunction funcType = new TypeFunction(retType, funcName, paramTypeList);
-		if (!isMethod)
-		{
+		if (!isMethod) {
 			SymbolTable.getInstance().enter(funcName, funcType);
 		}
 
@@ -91,22 +89,20 @@ public class AstDecFunc extends AstNode
 		SymbolTable.getInstance().beginScope();
 
 		/*******************************************************/
-		/* [3.5] Set current function return type for return  */
-		/*       statement validation                         */
+		/* [3.5] Set current function return type for return */
+		/* statement validation */
 		/*******************************************************/
 		SymbolTable.getInstance().setCurrentFunctionReturnType(retType);
 
 		// Enter parameters into symbol table
-		for (AstParametersList it = params; it != null; it = it.tail)
-		{
+		for (AstParametersList it = params; it != null; it = it.tail) {
 			// Check for reserved keyword in parameter name
 			TypeUtils.checkNotReservedKeyword(it.head.id, lineNumber);
 
 			paramType = SymbolTable.getInstance().find(it.head.type.typeName);
 
 			// Check if parameter name already exists in current scope
-			if (SymbolTable.getInstance().findInCurrentScope(it.head.id) != null)
-			{
+			if (SymbolTable.getInstance().findInCurrentScope(it.head.id) != null) {
 				throw new SemanticException("parameter " + it.head.id + " already exists in scope", lineNumber);
 			}
 
@@ -116,8 +112,7 @@ public class AstDecFunc extends AstNode
 		/*******************/
 		/* [4] Semant Body */
 		/*******************/
-		if (body != null)
-		{
+		if (body != null) {
 			body.semantMe();
 		}
 
@@ -127,7 +122,7 @@ public class AstDecFunc extends AstNode
 		SymbolTable.getInstance().endScope();
 
 		/*******************************************************/
-		/* [5.5] Clear current function return type           */
+		/* [5.5] Clear current function return type */
 		/*******************************************************/
 		SymbolTable.getInstance().setCurrentFunctionReturnType(null);
 
@@ -137,13 +132,18 @@ public class AstDecFunc extends AstNode
 		return null;
 	}
 
-	public Temp irMe()
-	{
-		Ir.
-				getInstance().
-				AddIrCommand(new IrCommandLabel(funcName));
-		if (body != null) body.irMe();
-
+	public Temp irMe() {
+		Ir.getInstance().AddIrCommand(new IrCommandLabel(funcName));
+		if (body != null)
+			body.irMe();
 		return null;
+	}
+
+	@Override
+	public int countLocalVars() {
+		if (body != null) {
+			return body.countLocalVars();
+		}
+		return 0;
 	}
 }

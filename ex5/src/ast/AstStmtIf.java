@@ -5,32 +5,28 @@ import temp.*;
 import types.*;
 import symboltable.*;
 
-public class AstStmtIf extends AstStmt
-{
+public class AstStmtIf extends AstStmt {
 	public AstExp cond;
 	public AstStmtList body;
 
 	/*******************/
-	/*  CONSTRUCTOR(S) */
+	/* CONSTRUCTOR(S) */
 	/*******************/
-	public AstStmtIf(AstExp cond, AstStmtList body, int lineNumber)
-	{
+	public AstStmtIf(AstExp cond, AstStmtList body, int lineNumber) {
 		serialNumber = AstNode.getFreshSerialNumber();
 		this.cond = cond;
 		this.body = body;
 		this.lineNumber = lineNumber;
 	}
 
-	public Type semantMe() throws SemanticException
-	{
+	public Type semantMe() throws SemanticException {
 		/****************************/
 		/* [0] Semant the Condition */
 		/****************************/
-		if (cond.semantMe() != TypeInt.getInstance())
-		{
+		if (cond.semantMe() != TypeInt.getInstance()) {
 			throw new SemanticException("condition inside IF is not integral", lineNumber);
 		}
-		
+
 		/*************************/
 		/* [1] Begin If Scope */
 		/*************************/
@@ -39,7 +35,8 @@ public class AstStmtIf extends AstStmt
 		/***************************/
 		/* [2] Semant Data Members */
 		/***************************/
-		if (body != null) body.semantMe();
+		if (body != null)
+			body.semantMe();
 
 		/*****************/
 		/* [3] End Scope */
@@ -52,10 +49,9 @@ public class AstStmtIf extends AstStmt
 		return null;
 	}
 
-	public Temp irMe()
-	{
+	public Temp irMe() {
 		/*******************************/
-		/* [1] Allocate a fresh label  */
+		/* [1] Allocate a fresh label */
 		/*******************************/
 		String labelEnd = IrCommand.getFreshLabel("end");
 
@@ -65,28 +61,33 @@ public class AstStmtIf extends AstStmt
 		Temp condTemp = cond.irMe();
 
 		/******************************************/
-		/* [3] Jump conditionally to the end      */
-		/*     (skip body if condition is false)  */
+		/* [3] Jump conditionally to the end */
+		/* (skip body if condition is false) */
 		/******************************************/
-		Ir.
-				getInstance().
-				AddIrCommand(new IrCommandJumpIfEqToZero(condTemp, labelEnd));
+		Ir.getInstance().AddIrCommand(new IrCommandJumpIfEqToZero(condTemp, labelEnd));
 
 		/*******************/
 		/* [4] body.irMe() */
 		/*******************/
-		if (body != null) body.irMe();
+		if (body != null)
+			body.irMe();
 
 		/*********************/
-		/* [5] End label     */
+		/* [5] End label */
 		/*********************/
-		Ir.
-				getInstance().
-				AddIrCommand(new IrCommandLabel(labelEnd));
+		Ir.getInstance().AddIrCommand(new IrCommandLabel(labelEnd));
 
 		/*******************/
 		/* [6] return null */
 		/*******************/
 		return null;
+	}
+
+	@Override
+	public int countLocalVars() {
+		if (body != null) {
+			return body.countLocalVars();
+		}
+		return 0;
 	}
 }

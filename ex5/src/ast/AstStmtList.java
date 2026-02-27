@@ -4,8 +4,7 @@ import ir.*;
 import temp.*;
 import types.*;
 
-public class AstStmtList extends AstNode
-{
+public class AstStmtList extends AstNode {
 	/****************/
 	/* DATA MEMBERS */
 	/****************/
@@ -15,18 +14,11 @@ public class AstStmtList extends AstNode
 	/******************/
 	/* CONSTRUCTOR(S) */
 	/******************/
-	public AstStmtList(AstStmt head, AstStmtList tail, int lineNumber)
-	{
+	public AstStmtList(AstStmt head, AstStmtList tail, int lineNumber) {
 		/******************************/
 		/* SET A UNIQUE SERIAL NUMBER */
 		/******************************/
 		serialNumber = AstNodeSerialNumber.getFresh();
-
-		/***************************************/
-		/* PRINT CORRESPONDING DERIVATION RULE */
-		/***************************************/
-		// if (tail != null) System.out.print("====================== stmts -> stmt stmts\n");
-		// if (tail == null) System.out.print("====================== stmts -> stmt      \n");
 
 		/*******************************/
 		/* COPY INPUT DATA MEMBERS ... */
@@ -39,8 +31,7 @@ public class AstStmtList extends AstNode
 	/******************************************************/
 	/* The printing message for a statement list AST node */
 	/******************************************************/
-	public void printMe()
-	{
+	public void printMe() {
 		/**************************************/
 		/* AST NODE TYPE = AST STATEMENT LIST */
 		/**************************************/
@@ -49,36 +40,54 @@ public class AstStmtList extends AstNode
 		/*************************************/
 		/* RECURSIVELY PRINT HEAD + TAIL ... */
 		/*************************************/
-		if (head != null) head.printMe();
-		if (tail != null) tail.printMe();
+		if (head != null)
+			head.printMe();
+		if (tail != null)
+			tail.printMe();
 
 		/**********************************/
 		/* PRINT to AST GRAPHVIZ DOT file */
 		/**********************************/
 		AstGraphviz.getInstance().logNode(
 				serialNumber,
-			"STMT\nLIST\n");
-		
+				"STMT\nLIST\n");
+
 		/****************************************/
 		/* PRINT Edges to AST GRAPHVIZ DOT file */
 		/****************************************/
-		if (head != null) AstGraphviz.getInstance().logEdge(serialNumber,head.serialNumber);
-		if (tail != null) AstGraphviz.getInstance().logEdge(serialNumber,tail.serialNumber);
+		if (head != null)
+			AstGraphviz.getInstance().logEdge(serialNumber, head.serialNumber);
+		if (tail != null)
+			AstGraphviz.getInstance().logEdge(serialNumber, tail.serialNumber);
 	}
 
-	public Type semantMe() throws SemanticException
-	{
-		if (head != null) head.semantMe();
-		if (tail != null) tail.semantMe();
+	public Type semantMe() throws SemanticException {
+		if (head != null)
+			head.semantMe();
+		if (tail != null)
+			tail.semantMe();
 
 		return null;
 	}
 
-	public Temp irMe()
-	{
-		if (head != null) head.irMe();
-		if (tail != null) tail.irMe();
+	public Temp irMe() {
+		if (head != null)
+			head.irMe();
+		if (tail != null)
+			tail.irMe();
 
 		return null;
+	}
+
+	@Override
+	public int countLocalVars() {
+		int count = 0;
+		if (head != null) {
+			count += head.countLocalVars();
+		}
+		if (tail != null) {
+			count += tail.countLocalVars();
+		}
+		return count;
 	}
 }

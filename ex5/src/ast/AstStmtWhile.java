@@ -5,37 +5,32 @@ import temp.*;
 import types.*;
 import symboltable.*;
 
-public class AstStmtWhile extends AstStmt
-{
+public class AstStmtWhile extends AstStmt {
 	public AstExp cond;
 	public AstStmtList body;
 
 	/*******************/
-	/*  CONSTRUCTOR(S) */
+	/* CONSTRUCTOR(S) */
 	/*******************/
-	public AstStmtWhile(AstExp cond, AstStmtList body, int lineNumber)
-	{
+	public AstStmtWhile(AstExp cond, AstStmtList body, int lineNumber) {
 		this.cond = cond;
 		this.body = body;
 		this.lineNumber = lineNumber;
 	}
 
 	/********************************************************/
-	/* Semantic analysis for while statement                */
-	/* Checks that condition is int and analyzes body       */
-	/* in a new scope                                       */
+	/* Semantic analysis for while statement */
+	/* Checks that condition is int and analyzes body */
+	/* in a new scope */
 	/********************************************************/
-	public Type semantMe() throws SemanticException
-	{
+	public Type semantMe() throws SemanticException {
 		/****************************/
 		/* [1] Check condition type */
 		/****************************/
-		if (cond != null)
-		{
+		if (cond != null) {
 			Type condType = cond.semantMe();
 
-			if (condType != TypeInt.getInstance())
-			{
+			if (condType != TypeInt.getInstance()) {
 				throw new SemanticException("condition inside WHILE is not integral", lineNumber);
 			}
 		}
@@ -45,8 +40,7 @@ public class AstStmtWhile extends AstStmt
 		/****************************/
 		SymbolTable.getInstance().beginScope();
 
-		if (body != null)
-		{
+		if (body != null) {
 			body.semantMe();
 		}
 
@@ -55,20 +49,17 @@ public class AstStmtWhile extends AstStmt
 		return null;
 	}
 
-	public Temp irMe()
-	{
+	public Temp irMe() {
 		/*******************************/
 		/* [1] Allocate 2 fresh labels */
 		/*******************************/
-		String labelEnd   = IrCommand.getFreshLabel("end");
+		String labelEnd = IrCommand.getFreshLabel("end");
 		String labelStart = IrCommand.getFreshLabel("start");
 
 		/*********************************/
 		/* [2] entry label for the while */
 		/*********************************/
-		Ir.
-				getInstance().
-				AddIrCommand(new IrCommandLabel(labelStart));
+		Ir.getInstance().AddIrCommand(new IrCommandLabel(labelStart));
 
 		/********************/
 		/* [3] cond.IRme(); */
@@ -78,32 +69,35 @@ public class AstStmtWhile extends AstStmt
 		/******************************************/
 		/* [4] Jump conditionally to the loop end */
 		/******************************************/
-		Ir.
-				getInstance().
-				AddIrCommand(new IrCommandJumpIfEqToZero(condTemp,labelEnd));
+		Ir.getInstance().AddIrCommand(new IrCommandJumpIfEqToZero(condTemp, labelEnd));
 
 		/*******************/
 		/* [5] body.IRme() */
 		/*******************/
-		if (body != null) body.irMe();
+		if (body != null)
+			body.irMe();
 
 		/******************************/
 		/* [6] Jump to the loop entry */
 		/******************************/
-		Ir.
-				getInstance().
-				AddIrCommand(new IrCommandJumpLabel(labelStart));
+		Ir.getInstance().AddIrCommand(new IrCommandJumpLabel(labelStart));
 
 		/**********************/
 		/* [7] Loop end label */
 		/**********************/
-		Ir.
-				getInstance().
-				AddIrCommand(new IrCommandLabel(labelEnd));
+		Ir.getInstance().AddIrCommand(new IrCommandLabel(labelEnd));
 
 		/*******************/
 		/* [8] return null */
 		/*******************/
 		return null;
+	}
+
+	@Override
+	public int countLocalVars() {
+		if (body != null) {
+			return body.countLocalVars();
+		}
+		return 0;
 	}
 }
