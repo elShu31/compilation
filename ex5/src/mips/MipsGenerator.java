@@ -239,6 +239,10 @@ public class MipsGenerator {
 	protected MipsGenerator() {
 	}
 
+	public void init(PrintWriter fileWriter) {
+		this.fileWriter = fileWriter;
+	}
+
 	/******************************/
 	/* GET SINGLETON INSTANCE ... */
 	/******************************/
@@ -249,21 +253,23 @@ public class MipsGenerator {
 			/*******************************/
 			instance = new MipsGenerator();
 
-			try {
-				/*********************************************************************************/
-				/*
-				 * [1] Open the MIPS text file and write data section with error message strings
-				 */
-				/*********************************************************************************/
-				String dirname = "./output/";
-				String filename = String.format("MIPS.txt");
+			if (instance.fileWriter == null) {
+				try {
+					/*********************************************************************************/
+					/*
+					 * [1] Open the MIPS text file and write data section with error message strings
+					 */
+					/*********************************************************************************/
+					String dirname = "./output/";
+					String filename = String.format("MIPS.txt");
 
-				/***************************************/
-				/* [2] Open MIPS text file for writing */
-				/***************************************/
-				instance.fileWriter = new PrintWriter(dirname + filename);
-			} catch (Exception e) {
-				e.printStackTrace();
+					/***************************************/
+					/* [2] Open MIPS text file for writing */
+					/***************************************/
+					instance.fileWriter = new PrintWriter(dirname + filename);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
 			}
 
 			/*****************************************************/

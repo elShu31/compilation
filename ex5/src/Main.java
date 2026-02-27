@@ -5,10 +5,8 @@ import ast.*;
 import ir.*;
 import mips.*;
 
-public class Main
-{
-	static public void main(String argv[])
-	{
+public class Main {
+	static public void main(String argv[]) {
 		Lexer l;
 		Parser p;
 		Symbol s;
@@ -18,8 +16,7 @@ public class Main
 		String inputFileName = argv[0];
 		String outputFileName = argv[1];
 
-		try
-		{
+		try {
 			/********************************/
 			/* [1] Initialize a file reader */
 			/********************************/
@@ -63,9 +60,10 @@ public class Main
 			/***********************/
 			/* [9] MIPS the Ir ... */
 			/***********************/
+			MipsGenerator.getInstance().init(fileWriter);
 			Ir.getInstance().mipsMe();
 
-			/**************************************/
+			/***************************************/
 			/* [10] Finalize AST GRAPHIZ DOT file */
 			/**************************************/
 			AstGraphviz.getInstance().finalizeFile();
@@ -81,8 +79,7 @@ public class Main
 			fileWriter.close();
 		}
 
-		catch (Exception e)
-		{
+		catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
