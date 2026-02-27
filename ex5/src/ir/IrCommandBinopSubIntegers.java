@@ -23,4 +23,8 @@ public class IrCommandBinopSubIntegers extends IrCommand {
 		this.t1 = t1;
 		this.t2 = t2;
 	}
+
+	public void mipsMe() {
+		MipsGenerator.getInstance().sub(dst, t1, t2);
+	}
 }

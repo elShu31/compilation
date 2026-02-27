@@ -12,26 +12,22 @@ package ir;
 /*******************/
 import mips.*;
 
-public class IrCommandAllocate extends IrCommand
-{
+public class IrCommandAllocate extends IrCommand {
 	public VarId varId;
 
-	public IrCommandAllocate(VarId varId)
-	{
+	public IrCommandAllocate(VarId varId) {
 		this.varId = varId;
 	}
 
 	/****************************************/
 	/* Convenience constructor for backward */
-	/* compatibility during transition      */
+	/* compatibility during transition */
 	/****************************************/
-	public IrCommandAllocate(String varName, int scopeOffset)
-	{
+	public IrCommandAllocate(String varName, int scopeOffset) {
 		this.varId = new VarId(varName, scopeOffset);
 	}
 
-	public void mipsMe()
-	{
-		MipsGenerator.getInstance().allocate(varName);
+	public void mipsMe() {
+		MipsGenerator.getInstance().allocate(varId.name);
 	}
 }

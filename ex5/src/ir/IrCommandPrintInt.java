@@ -19,4 +19,8 @@ public class IrCommandPrintInt extends IrCommand {
 	public IrCommandPrintInt(Temp t) {
 		this.t = t;
 	}
+
+	public void mipsMe() {
+		MipsGenerator.getInstance().printInt(t);
+	}
 }

@@ -30,4 +30,8 @@ public class IrCommandStore extends IrCommand {
 		this.src = src;
 		this.varId = new VarId(varName, scopeOffset);
 	}
+
+	public void mipsMe() {
+		MipsGenerator.getInstance().store(varId.name, src);
+	}
 }

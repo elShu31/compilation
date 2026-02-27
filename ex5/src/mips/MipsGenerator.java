@@ -15,14 +15,8 @@ import temp.*;
 
 public class MipsGenerator {
 	private static final int WORD_SIZE = 4;
-	/***********************/
-	/* The file writer ... */
-	/***********************/
 	private PrintWriter fileWriter;
 
-	/***********************/
-	/* The file writer ... */
-	/***********************/
 	public void finalizeFile() {
 		fileWriter.print("\tli $v0,10\n");
 		fileWriter.print("\tsyscall\n");
@@ -48,6 +42,9 @@ public class MipsGenerator {
 		fileWriter.format("\tsyscall\n");
 	}
 
+	/**************************/
+	/* Memory allocation */
+	/**************************/
 	public void malloc(Temp dst, int sizeBytes) {
 		int dstIdx = dst.getSerialNumber();
 		fileWriter.format("\t# Memory allocation\n");
@@ -57,6 +54,9 @@ public class MipsGenerator {
 		fileWriter.format("\tmove Temp_%d,$v0\n", dstIdx);
 	}
 
+	/**************************/
+	/* Global variables */
+	/**************************/
 	public void allocate(String varName) {
 		fileWriter.format(".data\n");
 		fileWriter.format("\tglobal_%s: .word 721\n", varName);
@@ -113,10 +113,16 @@ public class MipsGenerator {
 		}
 	}
 
-	public void jump(String inlabel) {
-		fileWriter.format("\tj %s\n", inlabel);
+	/**************************/
+	/* Jumps */
+	/**************************/
+	public void jump(String label) {
+		fileWriter.format("\tj %s\n", label);
 	}
 
+	/**************************/
+	/* Branches */
+	/**************************/
 	public void blt(Temp oprnd1, Temp oprnd2, String label) {
 		int i1 = oprnd1.getSerialNumber();
 		int i2 = oprnd2.getSerialNumber();
