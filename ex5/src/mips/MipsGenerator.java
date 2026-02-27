@@ -113,26 +113,20 @@ public class MipsGenerator {
 		String labelValidDiv = IrCommand.getFreshLabel("ValidDiv");
 
 		fileWriter.format("\tbne Temp_%d,$zero,%s\n", i2, labelValidDiv);
-		// Branch not taken - there is a zero division error
-		fileWriter.format("\t# ZeroDivisionError\n");
-		fileWriter.format("\tla $a0,string_illegal_div_by_0\n");
-		fileWriter.format("\tli $v0,4\n");
-		fileWriter.format("\tsyscall\n");
-		fileWriter.format("\tli $v0,10\n");
-		fileWriter.format("\tsyscall\n");
+		// Branch not taken - there is a zero division error, jump to error handler
+		jump("error_illegal_div_by_0");
 
 		// Branch was taken - there is no zero division error
-		fileWriter.format("\t# Valid division\n");
 		label(labelValidDiv);
 		fileWriter.format("\tdiv Temp_%d,Temp_%d,Temp_%d\n", dstidx, i1, i2);
 	}
 
-	public void label(String inlabel) {
-		if (inlabel.equals("main")) {
+	public void label(String label) {
+		if (label.equals("main")) {
 			fileWriter.format(".text\n");
-			fileWriter.format("%s:\n", inlabel);
+			fileWriter.format("%s:\n", label);
 		} else {
-			fileWriter.format("%s:\n", inlabel);
+			fileWriter.format("%s:\n", label);
 		}
 	}
 
@@ -279,6 +273,31 @@ public class MipsGenerator {
 			instance.fileWriter.print("string_access_violation: .asciiz \"Access Violation\"\n");
 			instance.fileWriter.print("string_illegal_div_by_0: .asciiz \"Illegal Division By Zero\"\n");
 			instance.fileWriter.print("string_invalid_ptr_dref: .asciiz \"Invalid Pointer Dereference\"\n");
+
+			/*********************************************************/
+			/* [4] Emit the MIPS code for those errors */
+			/*********************************************************/
+			instance.fileWriter.print(".text\n");
+			instance.fileWriter.print("error_string_access_violation:\n");
+			instance.fileWriter.print("\tli $v0,4\n");
+			instance.fileWriter.print("\tla $a0,string_access_violation\n");
+			instance.fileWriter.print("\tsyscall\n");
+			instance.fileWriter.print("\tli $v0,10\n");
+			instance.fileWriter.print("\tsyscall\n");
+
+			instance.fileWriter.print("error_illegal_div_by_0:\n");
+			instance.fileWriter.print("\tli $v0,4\n");
+			instance.fileWriter.print("\tla $a0,string_illegal_div_by_0\n");
+			instance.fileWriter.print("\tsyscall\n");
+			instance.fileWriter.print("\tli $v0,10\n");
+			instance.fileWriter.print("\tsyscall\n");
+
+			instance.fileWriter.print("error_invalid_ptr_dref:\n");
+			instance.fileWriter.print("\tli $v0,4\n");
+			instance.fileWriter.print("\tla $a0,string_invalid_ptr_dref\n");
+			instance.fileWriter.print("\tsyscall\n");
+			instance.fileWriter.print("\tli $v0,10\n");
+			instance.fileWriter.print("\tsyscall\n");
 		}
 		return instance;
 	}
