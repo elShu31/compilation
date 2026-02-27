@@ -137,6 +137,20 @@ public class MipsGenerator {
 		fileWriter.format("\tbge Temp_%d,Temp_%d,%s\n", i1, i2, label);
 	}
 
+	public void bgt(Temp oprnd1, Temp oprnd2, String label) {
+		int i1 = oprnd1.getSerialNumber();
+		int i2 = oprnd2.getSerialNumber();
+
+		fileWriter.format("\tbgt Temp_%d,Temp_%d,%s\n", i1, i2, label);
+	}
+
+	public void ble(Temp oprnd1, Temp oprnd2, String label) {
+		int i1 = oprnd1.getSerialNumber();
+		int i2 = oprnd2.getSerialNumber();
+
+		fileWriter.format("\tble Temp_%d,Temp_%d,%s\n", i1, i2, label);
+	}
+
 	public void bne(Temp oprnd1, Temp oprnd2, String label) {
 		int i1 = oprnd1.getSerialNumber();
 		int i2 = oprnd2.getSerialNumber();
@@ -155,6 +169,46 @@ public class MipsGenerator {
 		int i1 = oprnd1.getSerialNumber();
 
 		fileWriter.format("\tbeq Temp_%d,$zero,%s\n", i1, label);
+	}
+
+	/**************************/
+	/* Functions */
+	/**************************/
+	public void prologue() {
+		// Store $ra into the stack
+		fileWriter.format("\tsubu $sp,$sp,4\n");
+		fileWriter.format("\tsw $ra,0($sp)\n");
+
+		// Store $fp into the stack
+		fileWriter.format("\tsubu $sp,$sp,4\n");
+		fileWriter.format("\tsw $fp,0($sp)\n");
+
+		// move $sp to $fp
+		fileWriter.format("\tmove $fp,$sp\n");
+	}
+
+	public void epilogue() {
+		// mov $fp to $sp
+		fileWriter.format("\tmove $sp,$fp\n");
+
+		// load $fp from stack
+		fileWriter.format("\tlw $fp, 0($sp)\n");
+
+		// load $ra from stack
+		fileWriter.format("\tlw $ra, 4($sp)\n");
+
+		// add 8 to $sp
+		fileWriter.format("\taddu $sp,$sp,8\n");
+
+		// jump to $ra
+		fileWriter.format("\tjr $ra\n");
+	}
+
+	public void returnFromFunc(Temp retVal) {
+		if (retVal != null) {
+			fileWriter.format("\tmove $v0,$t%d\n", retVal.getSerialNumber());
+		}
+		epilogue();
 	}
 
 	/**************************************/
