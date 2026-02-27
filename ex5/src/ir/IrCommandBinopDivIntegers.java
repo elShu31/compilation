@@ -13,17 +13,19 @@ package ir;
 import temp.*;
 import mips.*;
 
-public class IrCommandBinopDivIntegers extends IrCommand
-{
+public class IrCommandBinopDivIntegers extends IrCommand {
 	public Temp t1;
 	public Temp t2;
 	public Temp dst;
-	
-	public IrCommandBinopDivIntegers(Temp dst, Temp t1, Temp t2)
-	{
+
+	public IrCommandBinopDivIntegers(Temp dst, Temp t1, Temp t2) {
 		this.dst = dst;
 		this.t1 = t1;
 		this.t2 = t2;
 	}
-}
 
+	@Override
+	public void mipsMe() {
+		MipsGenerator.getInstance().div(dst, t1, t2);
+	}
+}

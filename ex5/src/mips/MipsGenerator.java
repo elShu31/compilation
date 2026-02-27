@@ -12,6 +12,7 @@ import java.io.PrintWriter;
 /* PROJECT IMPORTS */
 /*******************/
 import temp.*;
+import ir.*;
 
 public class MipsGenerator {
 	private static final int WORD_SIZE = 4;
@@ -102,6 +103,28 @@ public class MipsGenerator {
 		int dstidx = dst.getSerialNumber();
 
 		fileWriter.format("\tsub Temp_%d,Temp_%d,Temp_%d\n", dstidx, i1, i2);
+	}
+
+	public void div(Temp dst, Temp oprnd1, Temp oprnd2) {
+		int i1 = oprnd1.getSerialNumber();
+		int i2 = oprnd2.getSerialNumber();
+		int dstidx = dst.getSerialNumber();
+
+		String labelValidDiv = IrCommand.getFreshLabel("ValidDiv");
+
+		fileWriter.format("\tbne Temp_%d,$zero,%s\n", i2, labelValidDiv);
+		// Branch not taken - there is a zero division error
+		fileWriter.format("\t# ZeroDivisionError\n");
+		fileWriter.format("\tla $a0,string_illegal_div_by_0\n");
+		fileWriter.format("\tli $v0,4\n");
+		fileWriter.format("\tsyscall\n");
+		fileWriter.format("\tli $v0,10\n");
+		fileWriter.format("\tsyscall\n");
+
+		// Branch was taken - there is no zero division error
+		fileWriter.format("\t# Valid division\n");
+		label(labelValidDiv);
+		fileWriter.format("\tdiv Temp_%d,Temp_%d,Temp_%d\n", dstidx, i1, i2);
 	}
 
 	public void label(String inlabel) {
