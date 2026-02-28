@@ -16,8 +16,7 @@ import types.*;
 /****************/
 /* SYMBOL TABLE */
 /****************/
-public class SymbolTable
-{
+public class SymbolTable {
 	private int hashArraySize = 13;
 
 	/**********************************************/
@@ -29,57 +28,81 @@ public class SymbolTable
 
 	/************************************************************/
 	/* Track the current function's return type for validation */
-	/* of return statements                                     */
+	/* of return statements */
 	/************************************************************/
 	private Type currentFunctionReturnType = null;
-	
+
+	/************************************************************/
+	/* Track the current function name */
+	/************************************************************/
+	private String currentFunctionName = null;
+
+	/************************************************************/
+	/* Frame pointer offset tracker for current function scope */
+	/************************************************************/
+	private int localOffsetCounter = 0;
+
 	/**************************************************************/
 	/* A very primitive hash function for exposition purposes ... */
 	/**************************************************************/
-	private int hash(String s)
-	{
-		if (s.charAt(0) == 'l') {return 1;}
-		if (s.charAt(0) == 'm') {return 1;}
-		if (s.charAt(0) == 'r') {return 3;}
-		if (s.charAt(0) == 'i') {return 6;}
-		if (s.charAt(0) == 'd') {return 6;}
-		if (s.charAt(0) == 'k') {return 6;}
-		if (s.charAt(0) == 'f') {return 6;}
-		if (s.charAt(0) == 'S') {return 6;}
+	private int hash(String s) {
+		if (s.charAt(0) == 'l') {
+			return 1;
+		}
+		if (s.charAt(0) == 'm') {
+			return 1;
+		}
+		if (s.charAt(0) == 'r') {
+			return 3;
+		}
+		if (s.charAt(0) == 'i') {
+			return 6;
+		}
+		if (s.charAt(0) == 'd') {
+			return 6;
+		}
+		if (s.charAt(0) == 'k') {
+			return 6;
+		}
+		if (s.charAt(0) == 'f') {
+			return 6;
+		}
+		if (s.charAt(0) == 'S') {
+			return 6;
+		}
 		return 12;
 	}
 
 	/****************************************************************************/
 	/* Enter a variable, function, class type or array type to the symbol table */
 	/****************************************************************************/
-	public void enter(String name, Type t)
-	{
+	public void enter(String name, Type t) {
 		/*************************************************/
 		/* [1] Compute the hash value for this new entry */
 		/*************************************************/
 		int hashValue = hash(name);
 
 		/******************************************************************************/
-		/* [2] Extract what will eventually be the next entry in the hashed position  */
-		/*     NOTE: this entry can very well be null, but the behaviour is identical */
+		/* [2] Extract what will eventually be the next entry in the hashed position */
+		/* NOTE: this entry can very well be null, but the behaviour is identical */
 		/******************************************************************************/
 		SymbolTableEntry next = table[hashValue];
-	
+
 		/**************************************************************************/
 		/* [3] Prepare a new symbol table entry with name, type, next and prevtop */
 		/**************************************************************************/
-		SymbolTableEntry e = new SymbolTableEntry(name,t,hashValue,next,top, topIndex++);
+		SymbolTableEntry e = new SymbolTableEntry(name, t, hashValue, next, top, topIndex++);
 
 		/**********************************************/
 		/* [4] Update the top of the symbol table ... */
 		/**********************************************/
 		top = e;
-		
+
 		/****************************************/
 		/* [5] Enter the new entry to the table */
 		/****************************************/
 		table[hashValue] = e;
-		
+
 		/**************************/
 		/* [6] Print Symbol Table */
 		/**************************/
@@ -89,14 +112,11 @@ public class SymbolTable
 	/***********************************************/
 	/* Find the inner-most scope element with name */
 	/***********************************************/
-	public Type find(String name)
-	{
+	public Type find(String name) {
 		SymbolTableEntry e;
 
-		for (e = table[hash(name)]; e != null; e = e.next)
-		{
-			if (name.equals(e.name))
-			{
+		for (e = table[hash(name)]; e != null; e = e.next) {
+			if (name.equals(e.name)) {
 				return e.type;
 			}
 		}
@@ -105,18 +125,15 @@ public class SymbolTable
 	}
 
 	/********************************************************/
-	/* Find the entry (with offset info) for a variable    */
-	/* Returns the SymbolTableEntry for the inner-most     */
-	/* scope element with the given name                   */
+	/* Find the entry (with offset info) for a variable */
+	/* Returns the SymbolTableEntry for the inner-most */
+	/* scope element with the given name */
 	/********************************************************/
-	public SymbolTableEntry findEntry(String name)
-	{
+	public SymbolTableEntry findEntry(String name) {
 		SymbolTableEntry e;
 
-		for (e = table[hash(name)]; e != null; e = e.next)
-		{
-			if (name.equals(e.name))
-			{
+		for (e = table[hash(name)]; e != null; e = e.next) {
+			if (name.equals(e.name)) {
 				return e;
 			}
 		}
@@ -125,38 +142,53 @@ public class SymbolTable
 	}
 
 	/********************************************************/
-	/* Get the scope offset for a variable                 */
-	/* This is the prevtopIndex which uniquely identifies  */
-	/* the variable declaration in the symbol table        */
+	/* Get the scope offset for a variable */
+	/* This is the prevtopIndex which uniquely identifies */
+	/* the variable declaration in the symbol table */
 	/********************************************************/
-	public int getScopeOffset(String name)
-	{
+	public int getScopeOffset(String name) {
 		SymbolTableEntry e = findEntry(name);
-		if (e != null)
-		{
+		if (e != null) {
 			return e.prevtopIndex;
 		}
 		return -1; // Not found
 	}
 
 	/********************************************************/
-	/* Find element with name in current scope only         */
-	/* Returns null if not found in current scope           */
+	/* Get the fp offset for a variable */
 	/********************************************************/
-	public Type findInCurrentScope(String name)
-	{
+	public int getFpOffset(String name) {
+		SymbolTableEntry e = findEntry(name);
+		if (e != null) {
+			return e.fpOffset;
+		}
+		return 0; // Not found
+	}
+
+	/********************************************************/
+	/* Set the fp offset for a variable */
+	/********************************************************/
+	public void setFpOffset(String name, int offset) {
+		SymbolTableEntry e = findEntry(name);
+		if (e != null) {
+			e.fpOffset = offset;
+		}
+	}
+
+	/********************************************************/
+	/* Find element with name in current scope only */
+	/* Returns null if not found in current scope */
+	/********************************************************/
+	public Type findInCurrentScope(String name) {
 		// Walk through the prevtop chain (entries in order of insertion)
 		// starting from the most recent entry (top)
-		for (SymbolTableEntry e = top; e != null; e = e.prevtop)
-		{
+		for (SymbolTableEntry e = top; e != null; e = e.prevtop) {
 			// Stop if we hit a scope boundary - we've left the current scope
-			if (e.name.equals("SCOPE-BOUNDARY"))
-			{
+			if (e.name.equals("SCOPE-BOUNDARY")) {
 				return null;
 			}
 			// Check if this entry matches the name we're looking for
-			if (name.equals(e.name))
-			{
+			if (name.equals(e.name)) {
 				return e.type;
 			}
 		}
@@ -164,20 +196,68 @@ public class SymbolTable
 		return null;
 	}
 
+	/********************************************************/
+	/* Check if the variable with the given name is global. */
+	/* A variable is global if there are no SCOPE-BOUNDARYs */
+	/* before it in the symbol table stack. */
+	/********************************************************/
+	public boolean isGlobalVariable(String name) {
+		SymbolTableEntry e = findEntry(name);
+		if (e == null) {
+			return false;
+		}
+
+		for (SymbolTableEntry p = e.prevtop; p != null; p = p.prevtop) {
+			if ("SCOPE-BOUNDARY".equals(p.name)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/*********************************************************/
+	/* Check if the current scope is global. */
+	/* The scope is global if there are no SCOPE-BOUNDARYs */
+	/* currently in the symbol table stack. */
+	/*********************************************************/
+	public boolean isGlobalScope() {
+		for (SymbolTableEntry p = top; p != null; p = p.prevtop) {
+			if ("SCOPE-BOUNDARY".equals(p.name)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/*********************************************************/
+	/* Reset the local FP offset counter */
+	/*********************************************************/
+	public void resetLocalOffsetCounter() {
+		this.localOffsetCounter = -4;
+	}
+
+	/*********************************************************/
+	/* Get the next available local FP offset */
+	/*********************************************************/
+	public int getNextLocalOffset() {
+		int offset = this.localOffsetCounter;
+		this.localOffsetCounter -= 4;
+		return offset;
+	}
+
 	/***************************************************************************/
 	/* begine scope = Enter the <SCOPE-BOUNDARY> element to the data structure */
 	/***************************************************************************/
-	public void beginScope()
-	{
+	public void beginScope() {
 		/************************************************************************/
 		/* Though <SCOPE-BOUNDARY> entries are present inside the symbol table, */
-		/* they are not really types. In order to be able to debug print them,  */
-		/* a special TYPE_FOR_SCOPE_BOUNDARIES was developed for them. This     */
-		/* class only contain their type name which is the bottom sign: _|_     */
+		/* they are not really types. In order to be able to debug print them, */
+		/* a special TYPE_FOR_SCOPE_BOUNDARIES was developed for them. This */
+		/* class only contain their type name which is the bottom sign: _|_ */
 		/************************************************************************/
 		enter(
-			"SCOPE-BOUNDARY",
-			new TypeForScopeBoundaries("NONE"));
+				"SCOPE-BOUNDARY",
+				new TypeForScopeBoundaries("NONE"));
 
 		/*********************************************/
 		/* Print the symbol table after every change */
@@ -186,48 +266,46 @@ public class SymbolTable
 	}
 
 	/********************************************************************************/
-	/* end scope = Keep popping elements out of the data structure,                 */
-	/* from most recent element entered, until a <NEW-SCOPE> element is encountered */
+	/* end scope = Keep popping elements out of the data structure, */
+	/*
+	 * from most recent element entered, until a <NEW-SCOPE> element is encountered
+	 */
 	/********************************************************************************/
-	public void endScope()
-	{
+	public void endScope() {
 		/**************************************************************************/
-		/* Pop elements from the symbol table stack until a SCOPE-BOUNDARY is hit */		
+		/* Pop elements from the symbol table stack until a SCOPE-BOUNDARY is hit */
 		/**************************************************************************/
-		while (top.name != "SCOPE-BOUNDARY")
-		{
+		while (top.name != "SCOPE-BOUNDARY") {
 			table[top.index] = top.next;
-			topIndex = topIndex -1;
+			topIndex = topIndex - 1;
 			top = top.prevtop;
 		}
 		/**************************************/
-		/* Pop the SCOPE-BOUNDARY sign itself */		
+		/* Pop the SCOPE-BOUNDARY sign itself */
 		/**************************************/
 		table[top.index] = top.next;
-		topIndex = topIndex -1;
+		topIndex = topIndex - 1;
 		top = top.prevtop;
 
 		/*********************************************/
-		/* Print the symbol table after every change */		
+		/* Print the symbol table after every change */
 		/*********************************************/
 		printMe();
 	}
-	
-	public static int n=0;
-	
-	public void printMe()
-	{
-		int i=0;
-		int j=0;
-		String dirname="./output/";
-		String filename=String.format("SYMBOL_TABLE_%d_IN_GRAPHVIZ_DOT_FORMAT.txt",n++);
 
-		try
-		{
+	public static int n = 0;
+
+	public void printMe() {
+		int i = 0;
+		int j = 0;
+		String dirname = "./output/";
+		String filename = String.format("SYMBOL_TABLE_%d_IN_GRAPHVIZ_DOT_FORMAT.txt", n++);
+
+		try {
 			/*******************************************/
 			/* [1] Open Graphviz text file for writing */
 			/*******************************************/
-			PrintWriter fileWriter = new PrintWriter(dirname+filename);
+			PrintWriter fileWriter = new PrintWriter(dirname + filename);
 
 			/*********************************/
 			/* [2] Write Graphviz dot prolog */
@@ -240,57 +318,53 @@ public class SymbolTable
 			/* [3] Write Hash Table Itself */
 			/*******************************/
 			fileWriter.print("hashTable [label=\"");
-			for (i=0;i<hashArraySize-1;i++) { fileWriter.format("<f%d>\n%d\n|",i,i); }
-			fileWriter.format("<f%d>\n%d\n\"];\n",hashArraySize-1,hashArraySize-1);
-		
+			for (i = 0; i < hashArraySize - 1; i++) {
+				fileWriter.format("<f%d>\n%d\n|", i, i);
+			}
+			fileWriter.format("<f%d>\n%d\n\"];\n", hashArraySize - 1, hashArraySize - 1);
+
 			/****************************************************************************/
 			/* [4] Loop over hash table array and print all linked lists per array cell */
 			/****************************************************************************/
-			for (i=0;i<hashArraySize;i++)
-			{
-				if (table[i] != null)
-				{
+			for (i = 0; i < hashArraySize; i++) {
+				if (table[i] != null) {
 					/*****************************************************/
 					/* [4a] Print hash table array[i] -> entry(i,0) edge */
 					/*****************************************************/
-					fileWriter.format("hashTable:f%d -> node_%d_0:f0;\n",i,i);
+					fileWriter.format("hashTable:f%d -> node_%d_0:f0;\n", i, i);
 				}
-				j=0;
-				for (SymbolTableEntry it = table[i]; it!=null; it=it.next)
-				{
+				j = 0;
+				for (SymbolTableEntry it = table[i]; it != null; it = it.next) {
 					/*******************************/
 					/* [4b] Print entry(i,it) node */
 					/*******************************/
-					fileWriter.format("node_%d_%d ",i,j);
+					fileWriter.format("node_%d_%d ", i, j);
 					fileWriter.format("[label=\"<f0>%s|<f1>%s|<f2>prevtop=%d|<f3>next\"];\n",
-						it.name,
-						it.type.name,
-						it.prevtopIndex);
+							it.name,
+							it.type.name,
+							it.prevtopIndex);
 
-					if (it.next != null)
-					{
+					if (it.next != null) {
 						/***************************************************/
 						/* [4c] Print entry(i,it) -> entry(i,it.next) edge */
 						/***************************************************/
 						fileWriter.format(
-							"node_%d_%d -> node_%d_%d [style=invis,weight=10];\n",
-							i,j,i,j+1);
+								"node_%d_%d -> node_%d_%d [style=invis,weight=10];\n",
+								i, j, i, j + 1);
 						fileWriter.format(
-							"node_%d_%d:f3 -> node_%d_%d:f0;\n",
-							i,j,i,j+1);
+								"node_%d_%d:f3 -> node_%d_%d:f0;\n",
+								i, j, i, j + 1);
 					}
 					j++;
 				}
 			}
 			fileWriter.print("}\n");
 			fileWriter.close();
-		}
-		catch (Exception e)
-		{
+		} catch (Exception e) {
 			e.printStackTrace();
-		}		
+		}
 	}
-	
+
 	/**************************************/
 	/* USUAL SINGLETON IMPLEMENTATION ... */
 	/**************************************/
@@ -299,15 +373,14 @@ public class SymbolTable
 	/*****************************/
 	/* PREVENT INSTANTIATION ... */
 	/*****************************/
-	protected SymbolTable() {}
+	protected SymbolTable() {
+	}
 
 	/******************************/
 	/* GET SINGLETON INSTANCE ... */
 	/******************************/
-	public static SymbolTable getInstance()
-	{
-		if (instance == null)
-		{
+	public static SymbolTable getInstance() {
+		if (instance == null) {
 			/*******************************/
 			/* [0] The instance itself ... */
 			/*******************************/
@@ -316,11 +389,11 @@ public class SymbolTable
 			/*****************************************/
 			/* [1] Enter primitive types int, string */
 			/*****************************************/
-			instance.enter("int",   TypeInt.getInstance());
+			instance.enter("int", TypeInt.getInstance());
 			instance.enter("string", TypeString.getInstance());
 
 			/*************************************/
-			/* [2] Enter void type               */
+			/* [2] Enter void type */
 			/*************************************/
 			instance.enter("void", TypeVoid.getInstance());
 
@@ -328,25 +401,25 @@ public class SymbolTable
 			/* [3] Enter library function PrintInt */
 			/***************************************/
 			instance.enter(
-				"PrintInt",
-				new TypeFunction(
-					TypeVoid.getInstance(),
 					"PrintInt",
-					new TypeList(
-						TypeInt.getInstance(),
-						null)));
+					new TypeFunction(
+							TypeVoid.getInstance(),
+							"PrintInt",
+							new TypeList(
+									TypeInt.getInstance(),
+									null)));
 
 			/******************************************/
 			/* [4] Enter library function PrintString */
 			/******************************************/
 			instance.enter(
-				"PrintString",
-				new TypeFunction(
-					TypeVoid.getInstance(),
 					"PrintString",
-					new TypeList(
-						TypeString.getInstance(),
-						null)));
+					new TypeFunction(
+							TypeVoid.getInstance(),
+							"PrintString",
+							new TypeList(
+									TypeString.getInstance(),
+									null)));
 
 		}
 		return instance;
@@ -355,16 +428,28 @@ public class SymbolTable
 	/****************************************************************/
 	/* Set the current function return type (when entering a func) */
 	/****************************************************************/
-	public void setCurrentFunctionReturnType(Type returnType)
-	{
+	public void setCurrentFunctionReturnType(Type returnType) {
 		this.currentFunctionReturnType = returnType;
 	}
 
 	/****************************************************************/
-	/* Get the current function return type (for return statements)*/
+	/* Get the current function return type (for return statements) */
 	/****************************************************************/
-	public Type getCurrentFunctionReturnType()
-	{
+	public Type getCurrentFunctionReturnType() {
 		return this.currentFunctionReturnType;
+	}
+
+	/****************************************************************/
+	/* Set the current function name (when entering a func) */
+	/****************************************************************/
+	public void setCurrentFunctionName(String name) {
+		this.currentFunctionName = name;
+	}
+
+	/****************************************************************/
+	/* Get the current function name */
+	/****************************************************************/
+	public String getCurrentFunctionName() {
+		return this.currentFunctionName;
 	}
 }

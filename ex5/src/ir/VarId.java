@@ -28,13 +28,25 @@ public class VarId {
 	/****************/
 	public final String name;
 	public final int scopeOffset;
+	public final boolean isGlobal;
+	public final int fpOffset;
 
 	/******************/
 	/* CONSTRUCTOR(S) */
 	/******************/
-	public VarId(String name, int scopeOffset) {
+	public VarId(String name, int scopeOffset, boolean isGlobal, int fpOffset) {
 		this.name = name;
 		this.scopeOffset = scopeOffset;
+		this.isGlobal = isGlobal;
+		this.fpOffset = fpOffset;
+	}
+
+	/****************************************/
+	/* Backward compatible constructor */
+	/* for global variables */
+	/****************************************/
+	public VarId(String name, int scopeOffset) {
+		this(name, scopeOffset, true, 0);
 	}
 
 	/****************************************/
@@ -56,12 +68,13 @@ public class VarId {
 		if (obj == null || getClass() != obj.getClass())
 			return false;
 		VarId varId = (VarId) obj;
-		return scopeOffset == varId.scopeOffset && Objects.equals(name, varId.name);
+		return scopeOffset == varId.scopeOffset && isGlobal == varId.isGlobal && fpOffset == varId.fpOffset
+				&& Objects.equals(name, varId.name);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(name, scopeOffset);
+		return Objects.hash(name, scopeOffset, isGlobal, fpOffset);
 	}
 
 	@Override

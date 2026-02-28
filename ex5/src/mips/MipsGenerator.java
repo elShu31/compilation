@@ -19,8 +19,6 @@ public class MipsGenerator {
 	private PrintWriter fileWriter;
 
 	public void finalizeFile() {
-		fileWriter.print("\tli $v0,10\n");
-		fileWriter.print("\tsyscall\n");
 		fileWriter.close();
 	}
 
@@ -58,19 +56,29 @@ public class MipsGenerator {
 	/**************************/
 	/* Global variables */
 	/**************************/
-	public void allocate(String varName) {
-		fileWriter.format(".data\n");
-		fileWriter.format("\tglobal_%s: .word 721\n", varName);
+	public void allocate(VarId varId) {
+		if (varId.isGlobal) {
+			fileWriter.format(".data\n");
+			fileWriter.format("\tglobal_%s: .word 721\n", varId.name);
+		}
 	}
 
-	public void load(Temp dst, String varName) {
+	public void load(Temp dst, VarId varId) {
 		int idxdst = dst.getSerialNumber();
-		fileWriter.format("\tlw Temp_%d,global_%s\n", idxdst, varName);
+		if (varId.isGlobal) {
+			fileWriter.format("\tlw Temp_%d,global_%s\n", idxdst, varId.name);
+		} else {
+			fileWriter.format("\tlw Temp_%d,%d($fp)\n", idxdst, varId.fpOffset);
+		}
 	}
 
-	public void store(String varName, Temp src) {
+	public void store(VarId varId, Temp src) {
 		int idxsrc = src.getSerialNumber();
-		fileWriter.format("\tsw Temp_%d,global_%s\n", idxsrc, varName);
+		if (varId.isGlobal) {
+			fileWriter.format("\tsw Temp_%d,global_%s\n", idxsrc, varId.name);
+		} else {
+			fileWriter.format("\tsw Temp_%d,%d($fp)\n", idxsrc, varId.fpOffset);
+		}
 	}
 
 	/**************************/
@@ -130,16 +138,16 @@ public class MipsGenerator {
 		}
 	}
 
-	/**************************/
-	/* Jumps */
-	/**************************/
+	/************************************/
+	/* Jumps and unconditional branches */
+	/************************************/
 	public void jump(String label) {
 		fileWriter.format("\tj %s\n", label);
 	}
 
-	/**************************/
-	/* Branches */
-	/**************************/
+	/**********************************/
+	/* Conditional branches. */
+	/**********************************/
 	public void blt(Temp oprnd1, Temp oprnd2, String label) {
 		int i1 = oprnd1.getSerialNumber();
 		int i2 = oprnd2.getSerialNumber();
@@ -191,41 +199,38 @@ public class MipsGenerator {
 	/**************************/
 	/* Functions */
 	/**************************/
-	public void prologue() {
-		// Store $ra into the stack
+	public void prologue(String funcName, int localVarsSize) {
 		fileWriter.format("\tsubu $sp,$sp,4\n");
 		fileWriter.format("\tsw $ra,0($sp)\n");
 
-		// Store $fp into the stack
 		fileWriter.format("\tsubu $sp,$sp,4\n");
 		fileWriter.format("\tsw $fp,0($sp)\n");
 
-		// move $sp to $fp
 		fileWriter.format("\tmove $fp,$sp\n");
-	}
 
-	public void epilogue() {
-		// mov $fp to $sp
-		fileWriter.format("\tmove $sp,$fp\n");
-
-		// load $fp from stack
-		fileWriter.format("\tlw $fp, 0($sp)\n");
-
-		// load $ra from stack
-		fileWriter.format("\tlw $ra, 4($sp)\n");
-
-		// add 8 to $sp
-		fileWriter.format("\taddu $sp,$sp,8\n");
-
-		// jump to $ra
-		fileWriter.format("\tjr $ra\n");
-	}
-
-	public void returnFromFunc(Temp retVal) {
-		if (retVal != null) {
-			fileWriter.format("\tmove $v0,$t%d\n", retVal.getSerialNumber());
+		if (localVarsSize > 0) {
+			fileWriter.format("\tsubu $sp,$sp,%d\n", localVarsSize);
 		}
-		epilogue();
+	}
+
+	public void epilogue(String funcName) {
+		if (funcName.equals("main")) {
+			fileWriter.format("\tli $v0,10\n");
+			fileWriter.format("\tsyscall\n");
+		} else {
+			fileWriter.format("\tmove $sp,$fp\n");
+			fileWriter.format("\tlw $fp, 0($sp)\n");
+			fileWriter.format("\tlw $ra, 4($sp)\n");
+			fileWriter.format("\taddu $sp,$sp,8\n");
+			fileWriter.format("\tjr $ra\n");
+		}
+	}
+
+	public void returnFromFunc(String funcName, Temp retVal) {
+		if (retVal != null) {
+			fileWriter.format("\tmove $v0,Temp_%d\n", retVal.getSerialNumber());
+		}
+		epilogue(funcName);
 	}
 
 	/**************************************/

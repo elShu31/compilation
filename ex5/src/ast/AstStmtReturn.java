@@ -5,15 +5,14 @@ import symboltable.*;
 import ir.*;
 import temp.*;
 
-public class AstStmtReturn extends AstStmt
-{
-	public AstExp exp;  // can be null for void return
+public class AstStmtReturn extends AstStmt {
+	public AstExp exp; // can be null for void return
+	public String funcName;
 
 	/*******************/
-	/*  CONSTRUCTOR(S) */
+	/* CONSTRUCTOR(S) */
 	/*******************/
-	public AstStmtReturn(AstExp exp, int lineNumber)
-	{
+	public AstStmtReturn(AstExp exp, int lineNumber) {
 		serialNumber = AstNodeSerialNumber.getFresh();
 		// System.out.print("====================== stmt -> RETURN exp SEMICOLON\n");
 		this.exp = exp;
@@ -23,39 +22,37 @@ public class AstStmtReturn extends AstStmt
 	/*********************************************************/
 	/* The printing message for a return statement AST node */
 	/*********************************************************/
-	public void printMe()
-	{
+	public void printMe() {
 		System.out.print("AST NODE RETURN STMT\n");
 
-		if (exp != null) exp.printMe();
+		if (exp != null)
+			exp.printMe();
 
 		AstGraphviz.getInstance().logNode(serialNumber, "RETURN");
 
-		if (exp != null) AstGraphviz.getInstance().logEdge(serialNumber, exp.serialNumber);
+		if (exp != null)
+			AstGraphviz.getInstance().logEdge(serialNumber, exp.serialNumber);
 	}
 
 	/*********************************************************/
-	/* Semantic analysis for return statement               */
+	/* Semantic analysis for return statement */
 	/*********************************************************/
-	public Type semantMe() throws SemanticException
-	{
+	public Type semantMe() throws SemanticException {
 		Type expectedReturnType = SymbolTable.getInstance().getCurrentFunctionReturnType();
+		this.funcName = SymbolTable.getInstance().getCurrentFunctionName();
 
 		/******************************************/
-		/* [1] Check if we're inside a function  */
+		/* [1] Check if we're inside a function */
 		/******************************************/
-		if (expectedReturnType == null)
-		{
+		if (expectedReturnType == null) {
 			throw new SemanticException("return statement outside of function", lineNumber);
 		}
 
 		/******************************************/
 		/* [2] void function - must return empty */
 		/******************************************/
-		if (expectedReturnType instanceof TypeVoid)
-		{
-			if (exp != null)
-			{
+		if (expectedReturnType instanceof TypeVoid) {
+			if (exp != null) {
 				throw new SemanticException("void function cannot return a value", lineNumber);
 			}
 			return null;
@@ -64,30 +61,28 @@ public class AstStmtReturn extends AstStmt
 		/************************************************/
 		/* [3] non-void function - must return a value */
 		/************************************************/
-		if (exp == null)
-		{
+		if (exp == null) {
 			throw new SemanticException("non-void function must return a value", lineNumber);
 		}
 
 		/************************************************/
-		/* [4] Check return expression type matches    */
+		/* [4] Check return expression type matches */
 		/************************************************/
 		Type actualReturnType = exp.semantMe();
 
-		if (!TypeUtils.canAssignType(expectedReturnType, actualReturnType))
-		{
+		if (!TypeUtils.canAssignType(expectedReturnType, actualReturnType)) {
 			throw new SemanticException("return type mismatch", lineNumber);
 		}
 
 		return null;
 	}
 
-	public Temp irMe()
-	{
-		if (exp != null)
-		{
-			exp.irMe();
+	public Temp irMe() {
+		Temp retVal = null;
+		if (exp != null) {
+			retVal = exp.irMe();
 		}
+		Ir.getInstance().AddIrCommand(new IrCommandReturn(funcName, retVal));
 		return null;
 	}
 }

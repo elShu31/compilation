@@ -5,24 +5,28 @@ import temp.*;
 import types.*;
 import symboltable.*;
 
-public class AstVarSimple extends AstVar
-{
+public class AstVarSimple extends AstVar {
 	/************************/
 	/* simple variable name */
 	/************************/
 	public String name;
-	
+
 	/*************************************************/
-	/* The scope offset captured during semantic     */
-	/* analysis for use in IR generation             */
+	/* Is this variable global or local */
+	/*************************************************/
+	public boolean isGlobal;
+	public int fpOffset = 0;
+
+	/*************************************************/
+	/* The scope offset captured during semantic */
+	/* analysis for use in IR generation */
 	/*************************************************/
 	private int scopeOffset = -1;
-	
+
 	/******************/
 	/* CONSTRUCTOR(S) */
 	/******************/
-	public AstVarSimple(String name, int lineNumber)
-	{
+	public AstVarSimple(String name, int lineNumber) {
 		/******************************/
 		/* SET A UNIQUE SERIAL NUMBER */
 		/******************************/
@@ -43,42 +47,50 @@ public class AstVarSimple extends AstVar
 	/**************************************************/
 	/* The printing message for a simple var AST node */
 	/**************************************************/
-	public void printMe()
-	{
+	public void printMe() {
 		/**********************************/
 		/* AST NODE TYPE = AST SIMPLE VAR */
 		/**********************************/
-		System.out.format("AST NODE SIMPLE VAR( %s )\n",name);
+		System.out.format("AST NODE SIMPLE VAR( %s )\n", name);
 
 		/*********************************/
 		/* Print to AST GRAPHVIZ DOT file */
 		/*********************************/
 		AstGraphviz.getInstance().logNode(
 				serialNumber,
-			String.format("SIMPLE\nVAR\n(%s)",name));
+				String.format("SIMPLE\nVAR\n(%s)", name));
 	}
 
 	/********************************************************/
-	/* Semantic analysis for simple variable               */
-	/* Looks up the variable name in the symbol table      */
+	/* Semantic analysis for simple variable */
+	/* Looks up the variable name in the symbol table */
 	/********************************************************/
-	public Type semantMe() throws SemanticException
-	{
+	public Type semantMe() throws SemanticException {
 		Type t = SymbolTable.getInstance().find(name);
 
-		if (t == null)
-		{
+		if (t == null) {
 			throw new SemanticException("undefined variable " + name, lineNumber);
 		}
-		
+
 		/*************************************************/
 		/* Capture the scope offset while scope is active */
 		/*************************************************/
 		this.scopeOffset = SymbolTable.getInstance().getScopeOffset(name);
 
+		/*************************************************/
+		/* Capture if the variable is global */
+		/*************************************************/
+		this.isGlobal = SymbolTable.getInstance().isGlobalVariable(name);
+
+		/*************************************************/
+		/* Grab local FP offset if not global */
+		/*************************************************/
+		if (!this.isGlobal) {
+			this.fpOffset = SymbolTable.getInstance().getFpOffset(name);
+		}
+
 		// If it's a field, return the field's type, not the TypeField wrapper
-		if (t instanceof TypeField)
-		{
+		if (t instanceof TypeField) {
 			return ((TypeField) t).fieldType;
 		}
 
@@ -86,27 +98,24 @@ public class AstVarSimple extends AstVar
 	}
 
 	/********************************************************/
-	/* IR generation for simple variable                   */
-	/* Loads the variable value into a fresh temp          */
+	/* IR generation for simple variable */
+	/* Loads the variable value into a fresh temp */
 	/********************************************************/
-	public Temp irMe()
-	{
+	public Temp irMe() {
 		Temp dst = TempFactory.getInstance().getFreshTemp();
 		/****************************************/
-		/* Use the captured scope offset       */
+		/* Use the captured scope offset */
 		/****************************************/
-		if (scopeOffset == -1)
-		{
+		if (scopeOffset == -1) {
 			// Fallback if semantMe wasn't called or failed (shouldn't happen in valid flow)
 			scopeOffset = SymbolTable.getInstance().getScopeOffset(name);
 		}
-		
-		Ir.getInstance().AddIrCommand(new IrCommandLoad(dst, name, scopeOffset));
+
+		Ir.getInstance().AddIrCommand(new IrCommandLoad(dst, name, scopeOffset, isGlobal, fpOffset));
 		return dst;
 	}
-	
-	public int getScopeOffset()
-	{
+
+	public int getScopeOffset() {
 		return scopeOffset;
 	}
 }

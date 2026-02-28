@@ -94,6 +94,11 @@ public class AstDecFunc extends AstNode {
 		/*******************************************************/
 		SymbolTable.getInstance().setCurrentFunctionReturnType(retType);
 
+		/*******************************************************/
+		/* [3.6] Set current function name */
+		/*******************************************************/
+		SymbolTable.getInstance().setCurrentFunctionName(funcName);
+
 		// Enter parameters into symbol table
 		for (AstParametersList it = params; it != null; it = it.tail) {
 			// Check for reserved keyword in parameter name
@@ -113,6 +118,7 @@ public class AstDecFunc extends AstNode {
 		/* [4] Semant Body */
 		/*******************/
 		if (body != null) {
+			SymbolTable.getInstance().resetLocalOffsetCounter();
 			body.semantMe();
 		}
 
@@ -126,6 +132,11 @@ public class AstDecFunc extends AstNode {
 		/*******************************************************/
 		SymbolTable.getInstance().setCurrentFunctionReturnType(null);
 
+		/*******************************************************/
+		/* [5.6] Clear current function name */
+		/*******************************************************/
+		SymbolTable.getInstance().setCurrentFunctionName(null);
+
 		/************************************************************/
 		/* [7] Return value is irrelevant for function declarations */
 		/************************************************************/
@@ -134,8 +145,15 @@ public class AstDecFunc extends AstNode {
 
 	public Temp irMe() {
 		Ir.getInstance().AddIrCommand(new IrCommandLabel(funcName));
+
+		int localVarsSize = countLocalVars() * 4;
+		Ir.getInstance().AddIrCommand(new IrCommandPrologue(funcName, localVarsSize));
+
 		if (body != null)
 			body.irMe();
+
+		Ir.getInstance().AddIrCommand(new IrCommandEpilogue(funcName));
+
 		return null;
 	}
 

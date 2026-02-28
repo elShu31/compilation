@@ -4,19 +4,17 @@ import ir.*;
 import temp.*;
 import types.*;
 
-public class AstStmtAssign extends AstStmt
-{
+public class AstStmtAssign extends AstStmt {
 	/***************/
-	/*  var := exp */
+	/* var := exp */
 	/***************/
 	public AstVar var;
 	public AstExp exp;
 
 	/*******************/
-	/*  CONSTRUCTOR(S) */
+	/* CONSTRUCTOR(S) */
 	/*******************/
-	public AstStmtAssign(AstVar var, AstExp exp, int lineNumber)
-	{
+	public AstStmtAssign(AstVar var, AstExp exp, int lineNumber) {
 		/******************************/
 		/* SET A UNIQUE SERIAL NUMBER */
 		/******************************/
@@ -25,7 +23,8 @@ public class AstStmtAssign extends AstStmt
 		/***************************************/
 		/* PRINT CORRESPONDING DERIVATION RULE */
 		/***************************************/
-		// System.out.print("====================== stmt -> var ASSIGN exp SEMICOLON\n");
+		// System.out.print("====================== stmt -> var ASSIGN exp
+		// SEMICOLON\n");
 
 		/*******************************/
 		/* COPY INPUT DATA MEMBERS ... */
@@ -38,8 +37,7 @@ public class AstStmtAssign extends AstStmt
 	/*********************************************************/
 	/* The printing message for an assign statement AST node */
 	/*********************************************************/
-	public void printMe()
-	{
+	public void printMe() {
 		/********************************************/
 		/* AST NODE TYPE = AST ASSIGNMENT STATEMENT */
 		/********************************************/
@@ -48,52 +46,53 @@ public class AstStmtAssign extends AstStmt
 		/***********************************/
 		/* RECURSIVELY PRINT VAR + EXP ... */
 		/***********************************/
-		if (var != null) var.printMe();
-		if (exp != null) exp.printMe();
+		if (var != null)
+			var.printMe();
+		if (exp != null)
+			exp.printMe();
 
 		/***************************************/
 		/* PRINT Node to AST GRAPHVIZ DOT file */
 		/***************************************/
 		AstGraphviz.getInstance().logNode(
 				serialNumber,
-			"ASSIGN\nleft := right\n");
-		
+				"ASSIGN\nleft := right\n");
+
 		/****************************************/
 		/* PRINT Edges to AST GRAPHVIZ DOT file */
 		/****************************************/
-		AstGraphviz.getInstance().logEdge(serialNumber,var.serialNumber);
-		AstGraphviz.getInstance().logEdge(serialNumber,exp.serialNumber);
+		AstGraphviz.getInstance().logEdge(serialNumber, var.serialNumber);
+		AstGraphviz.getInstance().logEdge(serialNumber, exp.serialNumber);
 	}
 
-	public Type semantMe() throws SemanticException
-	{
+	public Type semantMe() throws SemanticException {
 		Type t1 = null;
 		Type t2 = null;
 
 		/****************************/
-		/* [1] Semant var and exp   */
+		/* [1] Semant var and exp */
 		/****************************/
-		if (var != null) t1 = var.semantMe();
-		if (exp != null) t2 = exp.semantMe();
+		if (var != null)
+			t1 = var.semantMe();
+		if (exp != null)
+			t2 = exp.semantMe();
 
 		/****************************/
 		/* [2] Check for null types */
 		/****************************/
-		if (t1 == null)
-		{
+		if (t1 == null) {
 			throw new SemanticException("variable has no type", lineNumber);
 		}
-		if (t2 == null)
-		{
+		if (t2 == null) {
 			throw new SemanticException("expression has no type", lineNumber);
 		}
 
 		/************************************************/
 		/* [3] Check type compatibility for assignment */
 		/************************************************/
-		if (!TypeUtils.canAssignType(t1, t2))
-		{
-			throw new SemanticException("type mismatch in assignment: cannot assign " + t2.name + " to " + t1.name, lineNumber);
+		if (!TypeUtils.canAssignType(t1, t2)) {
+			throw new SemanticException("type mismatch in assignment: cannot assign " + t2.name + " to " + t1.name,
+					lineNumber);
 		}
 
 		/********************************************************/
@@ -102,20 +101,18 @@ public class AstStmtAssign extends AstStmt
 		return null;
 	}
 
-	public Temp irMe()
-	{
+	public Temp irMe() {
 		Temp src = exp.irMe();
 		/****************************************/
-		/* Get the scope offset for this var   */
-		/* from the symbol table               */
+		/* Get the scope offset for this var */
+		/* from the symbol table */
 		/****************************************/
-		if (var instanceof AstVarSimple)
-		{
+		if (var instanceof AstVarSimple) {
 			String varName = ((AstVarSimple) var).name;
 			int scopeOffset = ((AstVarSimple) var).getScopeOffset();
-			Ir.
-					getInstance().
-					AddIrCommand(new IrCommandStore(varName, scopeOffset, src));
+			boolean isGlobal = ((AstVarSimple) var).isGlobal;
+			int fpOffset = ((AstVarSimple) var).fpOffset;
+			Ir.getInstance().AddIrCommand(new IrCommandStore(varName, scopeOffset, isGlobal, fpOffset, src));
 		}
 		return null;
 	}

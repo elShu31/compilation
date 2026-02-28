@@ -26,6 +26,11 @@ public class IrCommandStore extends IrCommand {
 	/* Convenience constructor for backward */
 	/* compatibility during transition */
 	/****************************************/
+	public IrCommandStore(String varName, int scopeOffset, boolean isGlobal, int fpOffset, Temp src) {
+		this.src = src;
+		this.varId = new VarId(varName, scopeOffset, isGlobal, fpOffset);
+	}
+
 	public IrCommandStore(String varName, int scopeOffset, Temp src) {
 		this.src = src;
 		this.varId = new VarId(varName, scopeOffset);
@@ -33,6 +38,6 @@ public class IrCommandStore extends IrCommand {
 
 	@Override
 	public void mipsMe() {
-		MipsGenerator.getInstance().store(varId.name, src);
+		MipsGenerator.getInstance().store(varId, src);
 	}
 }

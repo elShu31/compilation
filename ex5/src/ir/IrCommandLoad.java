@@ -26,6 +26,11 @@ public class IrCommandLoad extends IrCommand {
 	/* Convenience constructor for backward */
 	/* compatibility during transition */
 	/****************************************/
+	public IrCommandLoad(Temp dst, String varName, int scopeOffset, boolean isGlobal, int fpOffset) {
+		this.dst = dst;
+		this.varId = new VarId(varName, scopeOffset, isGlobal, fpOffset);
+	}
+
 	public IrCommandLoad(Temp dst, String varName, int scopeOffset) {
 		this.dst = dst;
 		this.varId = new VarId(varName, scopeOffset);
@@ -33,6 +38,6 @@ public class IrCommandLoad extends IrCommand {
 
 	@Override
 	public void mipsMe() {
-		MipsGenerator.getInstance().load(dst, varId.name);
+		MipsGenerator.getInstance().load(dst, varId);
 	}
 }
