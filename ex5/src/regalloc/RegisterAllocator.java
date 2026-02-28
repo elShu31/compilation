@@ -4,7 +4,7 @@ import temp.Temp;
 import java.util.*;
 
 public class RegisterAllocator {
-    private static final int K = 10;
+    public static final int K = 10;
     private static final String[] COLORS = {
             "$t0", "$t1", "$t2", "$t3", "$t4",
             "$t5", "$t6", "$t7", "$t8", "$t9"

@@ -13,6 +13,7 @@ import java.io.PrintWriter;
 /*******************/
 import temp.*;
 import ir.*;
+import regalloc.RegisterAllocator;
 
 public class MipsGenerator {
 	private static final int WORD_SIZE = 4;
@@ -363,7 +364,22 @@ public class MipsGenerator {
 	}
 
 	public void callFunc(String funcName, int numArgs, Temp retVal) {
+		// Push registers to protect them before entering jal
+		// RegisterAllocator assigns $t0-$t9. So we preserve any active $t register.
+		fileWriter.format("\t# Preserve caller registers\n");
+		fileWriter.format("\tsubu $sp,$sp,%d\n", RegisterAllocator.K * WORD_SIZE);
+		for (int i = 0; i < RegisterAllocator.K; i++) {
+			fileWriter.format("\tsw $t%d,%d($sp)\n", i, i * WORD_SIZE);
+		}
+
 		fileWriter.format("\tjal %s\n", funcName);
+
+		// After jal, pop all preserved $t0-$t9
+		fileWriter.format("\t# Restore caller registers\n");
+		for (int i = RegisterAllocator.K - 1; i >= 0; i--) {
+			fileWriter.format("\tlw $t%d,%d($sp)\n", i, i * WORD_SIZE);
+		}
+		fileWriter.format("\taddu $sp,$sp,%d\n", RegisterAllocator.K * WORD_SIZE);
 
 		if (numArgs > 0) {
 			fileWriter.format("\taddu $sp,$sp,%d\n", numArgs * WORD_SIZE);
