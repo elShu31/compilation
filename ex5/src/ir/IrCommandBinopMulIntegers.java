@@ -12,6 +12,8 @@ package ir;
 /*******************/
 import temp.*;
 import mips.*;
+import java.util.Set;
+import java.util.HashSet;
 
 public class IrCommandBinopMulIntegers extends IrCommand {
 	public Temp t1;
@@ -27,5 +29,23 @@ public class IrCommandBinopMulIntegers extends IrCommand {
 	@Override
 	public void mipsMe() {
 		MipsGenerator.getInstance().mul(dst, t1, t2);
+	}
+
+	@Override
+	public Set<Temp> getUsedTemps() {
+		Set<Temp> s = new HashSet<>();
+		if (t1 != null)
+			s.add(t1);
+		if (t2 != null)
+			s.add(t2);
+		return s;
+	}
+
+	@Override
+	public Set<Temp> getDefinedTemps() {
+		Set<Temp> s = new HashSet<>();
+		if (dst != null)
+			s.add(dst);
+		return s;
 	}
 }

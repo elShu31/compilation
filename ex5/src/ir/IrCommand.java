@@ -11,6 +11,9 @@ package ir;
 /* PROJECT IMPORTS */
 /*******************/
 import mips.*;
+import java.util.Set;
+import java.util.HashSet;
+import temp.Temp;
 
 public abstract class IrCommand {
 	/*****************/
@@ -23,4 +26,12 @@ public abstract class IrCommand {
 	}
 
 	public abstract void mipsMe();
+
+	public Set<Temp> getUsedTemps() {
+		return new HashSet<>();
+	}
+
+	public Set<Temp> getDefinedTemps() {
+		return new HashSet<>();
+	}
 }

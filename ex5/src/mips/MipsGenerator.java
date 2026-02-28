@@ -26,17 +26,21 @@ public class MipsGenerator {
 	/* Library functions */
 	/**************************/
 	public void printInt(Temp t) {
-		int idx = t.getSerialNumber();
 		fileWriter.format("\t# Print integer\n");
-		fileWriter.format("\tmove $a0,Temp_%d\n", idx);
+		fileWriter.format("\tmove $a0,%s\n", regalloc.RegisterAllocator.getReg(t));
 		fileWriter.format("\tli $v0,1\n");
+		fileWriter.format("\tsyscall\n");
+		fileWriter.format("\t# Print space\n");
+
+		// 32 is the ASCII code for space
+		fileWriter.format("\tli $a0,32\n");
+		fileWriter.format("\tli $v0,11\n");
 		fileWriter.format("\tsyscall\n");
 	}
 
 	public void printString(Temp t) {
-		int idx = t.getSerialNumber();
 		fileWriter.format("\t# Print string\n");
-		fileWriter.format("\tmove $a0,Temp_%d\n", idx);
+		fileWriter.format("\tmove $a0,%s\n", regalloc.RegisterAllocator.getReg(t));
 		fileWriter.format("\tli $v0,4\n");
 		fileWriter.format("\tsyscall\n");
 	}
@@ -45,69 +49,58 @@ public class MipsGenerator {
 	/* Memory allocation */
 	/**************************/
 	public void malloc(Temp dst, int sizeBytes) {
-		int dstIdx = dst.getSerialNumber();
 		fileWriter.format("\t# Memory allocation\n");
 		fileWriter.format("\tli $a0,%d\n", sizeBytes);
 		fileWriter.format("\tli $v0,9\n");
 		fileWriter.format("\tsyscall\n");
-		fileWriter.format("\tmove Temp_%d,$v0\n", dstIdx);
+		fileWriter.format("\tmove %s,$v0\n", regalloc.RegisterAllocator.getReg(dst));
 	}
 
 	public void la(Temp dst, String label) {
-		int dstIdx = dst.getSerialNumber();
-		fileWriter.format("\tla Temp_%d,%s\n", dstIdx, label);
+		fileWriter.format("\tla %s,%s\n", regalloc.RegisterAllocator.getReg(dst), label);
 	}
 
 	public void allocateArray(Temp dst, Temp size) {
-		int dstIdx = dst.getSerialNumber();
-		int sizeIdx = size.getSerialNumber();
 		fileWriter.format("\t# Allocate Array\n");
 		// 1. Add 1 to size for the length metadata
-		fileWriter.format("\taddi $a0,Temp_%d,1\n", sizeIdx);
+		fileWriter.format("\taddi $a0,%s,1\n", regalloc.RegisterAllocator.getReg(size));
 		// 2. Multiply by 4 (shift left 2) because each array element is a 4-byte word
 		fileWriter.format("\tsll $a0,$a0,2\n");
 		fileWriter.format("\tli $v0,9\n");
 		fileWriter.format("\tsyscall\n");
 		// 3. Store result pointer in dst
-		fileWriter.format("\tmove Temp_%d,$v0\n", dstIdx);
+		fileWriter.format("\tmove %s,$v0\n", regalloc.RegisterAllocator.getReg(dst));
 		// 4. Store original size (length) at 0(dst)
-		fileWriter.format("\tsw Temp_%d,0(Temp_%d)\n", sizeIdx, dstIdx);
+		fileWriter.format("\tsw %s,0(%s)\n", regalloc.RegisterAllocator.getReg(size),
+				regalloc.RegisterAllocator.getReg(dst));
 		// 5. End of allocate array
 		fileWriter.format("\t# End of Allocate Array\n");
 	}
 
 	public void loadArray(Temp dst, Temp arrayBase, Temp index) {
-		int dstIdx = dst.getSerialNumber();
-		int baseIdx = arrayBase.getSerialNumber();
-		int indexIdx = index.getSerialNumber();
-
 		fileWriter.format("\t# Load Array\n");
 		// 1. Add 1 to index to skip length metadata
-		fileWriter.format("\taddi $t0,Temp_%d,1\n", indexIdx);
+		fileWriter.format("\taddi $v1,%s,1\n", regalloc.RegisterAllocator.getReg(index));
 		// 2. Multiply by 4 (shift left 2) because each array element is a 4-byte word
-		fileWriter.format("\tsll $t0,$t0,2\n");
+		fileWriter.format("\tsll $v1,$v1,2\n");
 		// 3. Add offset to base address
-		fileWriter.format("\tadd $t0,$t0,Temp_%d\n", baseIdx);
+		fileWriter.format("\tadd $v1,$v1,%s\n", regalloc.RegisterAllocator.getReg(arrayBase));
 		// 4. Load from address
-		fileWriter.format("\tlw Temp_%d,0($t0)\n", dstIdx);
+		fileWriter.format("\tlw %s,0($v1)\n", regalloc.RegisterAllocator.getReg(dst));
 		// 5. End of load array
 		fileWriter.format("\t# End of Load Array\n");
 	}
 
 	public void storeArray(Temp arrayBase, Temp index, Temp src) {
-		int baseIdx = arrayBase.getSerialNumber();
-		int indexIdx = index.getSerialNumber();
-		int srcIdx = src.getSerialNumber();
-
 		fileWriter.format("\t# Store Array\n");
 		// 1. Add 1 to index to skip length metadata
-		fileWriter.format("\taddi $t0,Temp_%d,1\n", indexIdx);
+		fileWriter.format("\taddi $v1,%s,1\n", regalloc.RegisterAllocator.getReg(index));
 		// 2. Multiply by 4 (shift left 2)
-		fileWriter.format("\tsll $t0,$t0,2\n");
+		fileWriter.format("\tsll $v1,$v1,2\n");
 		// 3. Add offset to base address
-		fileWriter.format("\tadd $t0,$t0,Temp_%d\n", baseIdx);
+		fileWriter.format("\tadd $v1,$v1,%s\n", regalloc.RegisterAllocator.getReg(arrayBase));
 		// 4. Store src at address
-		fileWriter.format("\tsw Temp_%d,0($t0)\n", srcIdx);
+		fileWriter.format("\tsw %s,0($v1)\n", regalloc.RegisterAllocator.getReg(src));
 		// 5. End of store array
 		fileWriter.format("\t# Store Array End\n");
 	}
@@ -123,20 +116,18 @@ public class MipsGenerator {
 	}
 
 	public void load(Temp dst, VarId varId) {
-		int idxdst = dst.getSerialNumber();
 		if (varId.isGlobal) {
-			fileWriter.format("\tlw Temp_%d,global_%s\n", idxdst, varId.name);
+			fileWriter.format("\tlw %s,global_%s\n", regalloc.RegisterAllocator.getReg(dst), varId.name);
 		} else {
-			fileWriter.format("\tlw Temp_%d,%d($fp)\n", idxdst, varId.fpOffset);
+			fileWriter.format("\tlw %s,%d($fp)\n", regalloc.RegisterAllocator.getReg(dst), varId.fpOffset);
 		}
 	}
 
 	public void store(VarId varId, Temp src) {
-		int idxsrc = src.getSerialNumber();
 		if (varId.isGlobal) {
-			fileWriter.format("\tsw Temp_%d,global_%s\n", idxsrc, varId.name);
+			fileWriter.format("\tsw %s,global_%s\n", regalloc.RegisterAllocator.getReg(src), varId.name);
 		} else {
-			fileWriter.format("\tsw Temp_%d,%d($fp)\n", idxsrc, varId.fpOffset);
+			fileWriter.format("\tsw %s,%d($fp)\n", regalloc.RegisterAllocator.getReg(src), varId.fpOffset);
 		}
 	}
 
@@ -144,48 +135,35 @@ public class MipsGenerator {
 	/* MIPS instructions */
 	/**************************/
 	public void li(Temp t, int value) {
-		int idx = t.getSerialNumber();
-		fileWriter.format("\tli Temp_%d,%d\n", idx, value);
+		fileWriter.format("\tli %s,%d\n", regalloc.RegisterAllocator.getReg(t), value);
 	}
 
 	public void add(Temp dst, Temp oprnd1, Temp oprnd2) {
-		int i1 = oprnd1.getSerialNumber();
-		int i2 = oprnd2.getSerialNumber();
-		int dstidx = dst.getSerialNumber();
-
-		fileWriter.format("\tadd Temp_%d,Temp_%d,Temp_%d\n", dstidx, i1, i2);
+		fileWriter.format("\tadd %s,%s,%s\n", regalloc.RegisterAllocator.getReg(dst),
+				regalloc.RegisterAllocator.getReg(oprnd1), regalloc.RegisterAllocator.getReg(oprnd2));
 	}
 
 	public void mul(Temp dst, Temp oprnd1, Temp oprnd2) {
-		int i1 = oprnd1.getSerialNumber();
-		int i2 = oprnd2.getSerialNumber();
-		int dstidx = dst.getSerialNumber();
-
-		fileWriter.format("\tmul Temp_%d,Temp_%d,Temp_%d\n", dstidx, i1, i2);
+		fileWriter.format("\tmul %s,%s,%s\n", regalloc.RegisterAllocator.getReg(dst),
+				regalloc.RegisterAllocator.getReg(oprnd1), regalloc.RegisterAllocator.getReg(oprnd2));
 	}
 
 	public void sub(Temp dst, Temp oprnd1, Temp oprnd2) {
-		int i1 = oprnd1.getSerialNumber();
-		int i2 = oprnd2.getSerialNumber();
-		int dstidx = dst.getSerialNumber();
-
-		fileWriter.format("\tsub Temp_%d,Temp_%d,Temp_%d\n", dstidx, i1, i2);
+		fileWriter.format("\tsub %s,%s,%s\n", regalloc.RegisterAllocator.getReg(dst),
+				regalloc.RegisterAllocator.getReg(oprnd1), regalloc.RegisterAllocator.getReg(oprnd2));
 	}
 
 	public void div(Temp dst, Temp oprnd1, Temp oprnd2) {
-		int i1 = oprnd1.getSerialNumber();
-		int i2 = oprnd2.getSerialNumber();
-		int dstidx = dst.getSerialNumber();
-
 		String labelValidDiv = IrCommand.getFreshLabel("ValidDiv");
 
-		fileWriter.format("\tbne Temp_%d,$zero,%s\n", i2, labelValidDiv);
+		fileWriter.format("\tbne %s,$zero,%s\n", regalloc.RegisterAllocator.getReg(oprnd2), labelValidDiv);
 		// Branch not taken - there is a zero division error, jump to error handler
 		jump("error_illegal_div_by_0");
 
 		// Branch was taken - there is no zero division error
 		label(labelValidDiv);
-		fileWriter.format("\tdiv Temp_%d,Temp_%d,Temp_%d\n", dstidx, i1, i2);
+		fileWriter.format("\tdiv %s,%s,%s\n", regalloc.RegisterAllocator.getReg(dst),
+				regalloc.RegisterAllocator.getReg(oprnd1), regalloc.RegisterAllocator.getReg(oprnd2));
 	}
 
 	public void label(String label) {
@@ -206,51 +184,37 @@ public class MipsGenerator {
 	/* Conditional branches. */
 	/**********************************/
 	public void blt(Temp oprnd1, Temp oprnd2, String label) {
-		int i1 = oprnd1.getSerialNumber();
-		int i2 = oprnd2.getSerialNumber();
-
-		fileWriter.format("\tblt Temp_%d,Temp_%d,%s\n", i1, i2, label);
+		fileWriter.format("\tblt %s,%s,%s\n", regalloc.RegisterAllocator.getReg(oprnd1),
+				regalloc.RegisterAllocator.getReg(oprnd2), label);
 	}
 
 	public void bge(Temp oprnd1, Temp oprnd2, String label) {
-		int i1 = oprnd1.getSerialNumber();
-		int i2 = oprnd2.getSerialNumber();
-
-		fileWriter.format("\tbge Temp_%d,Temp_%d,%s\n", i1, i2, label);
+		fileWriter.format("\tbge %s,%s,%s\n", regalloc.RegisterAllocator.getReg(oprnd1),
+				regalloc.RegisterAllocator.getReg(oprnd2), label);
 	}
 
 	public void bgt(Temp oprnd1, Temp oprnd2, String label) {
-		int i1 = oprnd1.getSerialNumber();
-		int i2 = oprnd2.getSerialNumber();
-
-		fileWriter.format("\tbgt Temp_%d,Temp_%d,%s\n", i1, i2, label);
+		fileWriter.format("\tbgt %s,%s,%s\n", regalloc.RegisterAllocator.getReg(oprnd1),
+				regalloc.RegisterAllocator.getReg(oprnd2), label);
 	}
 
 	public void ble(Temp oprnd1, Temp oprnd2, String label) {
-		int i1 = oprnd1.getSerialNumber();
-		int i2 = oprnd2.getSerialNumber();
-
-		fileWriter.format("\tble Temp_%d,Temp_%d,%s\n", i1, i2, label);
+		fileWriter.format("\tble %s,%s,%s\n", regalloc.RegisterAllocator.getReg(oprnd1),
+				regalloc.RegisterAllocator.getReg(oprnd2), label);
 	}
 
 	public void bne(Temp oprnd1, Temp oprnd2, String label) {
-		int i1 = oprnd1.getSerialNumber();
-		int i2 = oprnd2.getSerialNumber();
-
-		fileWriter.format("\tbne Temp_%d,Temp_%d,%s\n", i1, i2, label);
+		fileWriter.format("\tbne %s,%s,%s\n", regalloc.RegisterAllocator.getReg(oprnd1),
+				regalloc.RegisterAllocator.getReg(oprnd2), label);
 	}
 
 	public void beq(Temp oprnd1, Temp oprnd2, String label) {
-		int i1 = oprnd1.getSerialNumber();
-		int i2 = oprnd2.getSerialNumber();
-
-		fileWriter.format("\tbeq Temp_%d,Temp_%d,%s\n", i1, i2, label);
+		fileWriter.format("\tbeq %s,%s,%s\n", regalloc.RegisterAllocator.getReg(oprnd1),
+				regalloc.RegisterAllocator.getReg(oprnd2), label);
 	}
 
 	public void beqz(Temp oprnd1, String label) {
-		int i1 = oprnd1.getSerialNumber();
-
-		fileWriter.format("\tbeq Temp_%d,$zero,%s\n", i1, label);
+		fileWriter.format("\tbeq %s,$zero,%s\n", regalloc.RegisterAllocator.getReg(oprnd1), label);
 	}
 
 	/**************************/
@@ -285,15 +249,14 @@ public class MipsGenerator {
 
 	public void returnFromFunc(String funcName, Temp retVal) {
 		if (retVal != null) {
-			fileWriter.format("\tmove $v0,Temp_%d\n", retVal.getSerialNumber());
+			fileWriter.format("\tmove $v0,%s\n", regalloc.RegisterAllocator.getReg(retVal));
 		}
 		epilogue(funcName);
 	}
 
 	public void pushArg(Temp arg) {
-		int idx = arg.getSerialNumber();
 		fileWriter.format("\tsubu $sp,$sp,4\n");
-		fileWriter.format("\tsw Temp_%d,0($sp)\n", idx);
+		fileWriter.format("\tsw %s,0($sp)\n", regalloc.RegisterAllocator.getReg(arg));
 	}
 
 	public void callFunc(String funcName, int numArgs, Temp retVal) {
@@ -304,7 +267,7 @@ public class MipsGenerator {
 		}
 
 		if (retVal != null) {
-			fileWriter.format("\tmove Temp_%d,$v0\n", retVal.getSerialNumber());
+			fileWriter.format("\tmove %s,$v0\n", regalloc.RegisterAllocator.getReg(retVal));
 		}
 	}
 

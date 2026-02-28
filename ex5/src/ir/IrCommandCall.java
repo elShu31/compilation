@@ -12,6 +12,8 @@ package ir;
 /*******************/
 import mips.*;
 import temp.*;
+import java.util.Set;
+import java.util.HashSet;
 
 public class IrCommandCall extends IrCommand {
     public String funcName;
@@ -27,5 +29,13 @@ public class IrCommandCall extends IrCommand {
     @Override
     public void mipsMe() {
         MipsGenerator.getInstance().callFunc(funcName, numArgs, retVal);
+    }
+
+    @Override
+    public Set<Temp> getDefinedTemps() {
+        Set<Temp> s = new HashSet<>();
+        if (retVal != null)
+            s.add(retVal);
+        return s;
     }
 }

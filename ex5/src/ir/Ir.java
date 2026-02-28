@@ -13,6 +13,8 @@ import java.util.List;
 /* PROJECT IMPORTS */
 /*******************/
 import mips.*;
+import cfg.*;
+import regalloc.*;
 
 public class Ir {
 	private List<IrCommand> commands = new ArrayList<>();
@@ -88,9 +90,39 @@ public class Ir {
 		// Output .data section strings first
 		MipsGenerator.getInstance().emitStrings(stringTable);
 
+		List<IrCommand> currentFunc = new ArrayList<>();
+		boolean inFunc = false;
+
 		// Output commands inside .text
 		for (IrCommand cmd : commands) {
-			cmd.mipsMe();
+			if (cmd instanceof IrCommandPrologue) {
+				inFunc = true;
+				currentFunc.clear();
+			}
+
+			if (inFunc) {
+				currentFunc.add(cmd);
+			} else {
+				// Global allocations
+				cmd.mipsMe();
+			}
+
+			if (cmd instanceof IrCommandEpilogue) {
+				inFunc = false;
+
+				// Run register allocation for the current function
+				CFG funcCfg = new CFG(currentFunc);
+				LivenessAnalyzer liveness = new LivenessAnalyzer(funcCfg);
+				InterferenceGraph ig = new InterferenceGraph(funcCfg, liveness);
+
+				RegisterAllocator.allocationMap.clear();
+				RegisterAllocator.allocateRegisters(ig);
+
+				// Now output the function commands with assigned registers
+				for (IrCommand funcCmd : currentFunc) {
+					funcCmd.mipsMe();
+				}
+			}
 		}
 	}
 }

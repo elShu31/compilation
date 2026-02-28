@@ -11,8 +11,8 @@ public class Main {
 		Parser p;
 		Symbol s;
 		AstDecList ast;
-		FileReader fileReader;
-		PrintWriter fileWriter;
+		FileReader fileReader = null;
+		PrintWriter fileWriter = null;
 		String inputFileName = argv[0];
 		String outputFileName = argv[1];
 
@@ -79,7 +79,18 @@ public class Main {
 			fileWriter.close();
 		}
 
-		catch (Exception e) {
+		catch (regalloc.RegisterAllocationException e) {
+			try {
+				if (fileWriter != null) {
+					fileWriter.close();
+				}
+				PrintWriter fw = new PrintWriter(outputFileName);
+				fw.print("Register Allocation Failed");
+				fw.close();
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}

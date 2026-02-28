@@ -12,6 +12,8 @@ package ir;
 /*******************/
 import mips.*;
 import temp.*;
+import java.util.Set;
+import java.util.HashSet;
 
 public class IrCommandLoadAddress extends IrCommand {
     public Temp dst;
@@ -25,5 +27,13 @@ public class IrCommandLoadAddress extends IrCommand {
     @Override
     public void mipsMe() {
         MipsGenerator.getInstance().la(dst, label);
+    }
+
+    @Override
+    public Set<Temp> getDefinedTemps() {
+        Set<Temp> s = new HashSet<>();
+        if (dst != null)
+            s.add(dst);
+        return s;
     }
 }
