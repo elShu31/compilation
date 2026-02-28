@@ -172,17 +172,45 @@ public class MipsGenerator {
 		fileWriter.format("\tsll $a0,$a0,2\n");
 		fileWriter.format("\tli $v0,9\n");
 		fileWriter.format("\tsyscall\n");
-		// 3. Store result pointer in dst
+		// 3. Store original size (length) at 0($v0) BEFORE moving to dst
+		// This protects the size register even if RegisterAllocator mapped dst and size
+		// to the same register
+		fileWriter.format("\tsw %s,0($v0)\n", regalloc.RegisterAllocator.getReg(size));
+		// 4. Store result pointer in dst
 		fileWriter.format("\tmove %s,$v0\n", regalloc.RegisterAllocator.getReg(dst));
-		// 4. Store original size (length) at 0(dst)
-		fileWriter.format("\tsw %s,0(%s)\n", regalloc.RegisterAllocator.getReg(size),
-				regalloc.RegisterAllocator.getReg(dst));
 		// 5. End of allocate array
 		fileWriter.format("\t# End of Allocate Array\n");
 	}
 
+	private void checkArrayBounds(Temp arrayBase, Temp index) {
+		String rBase = regalloc.RegisterAllocator.getReg(arrayBase);
+		String rIndex = regalloc.RegisterAllocator.getReg(index);
+
+		fileWriter.format("\t# Array bounds check\n");
+
+		// 0. Store $v1 to stack
+		fileWriter.format("\tsubu $sp,$sp,4\n");
+		fileWriter.format("\tsw $v1,0($sp)\n");
+
+		// 1. Check if index < 0
+		fileWriter.format("\tbltz %s,error_access_violation\n", rIndex);
+
+		// 2. Load array size (from 0 offset of base)
+		fileWriter.format("\tlw $v1,0(%s)\n", rBase);
+
+		// 3. Check if index >= size
+		fileWriter.format("\tbge %s,$v1,error_access_violation\n", rIndex);
+
+		// 4. Restore $v1 from stack, load/store is valid
+		fileWriter.format("\tlw $v1,0($sp)\n");
+		fileWriter.format("\taddu $sp,$sp,4\n");
+		fileWriter.format("\t# End bounds check\n");
+	}
+
 	public void loadArray(Temp dst, Temp arrayBase, Temp index) {
 		fileWriter.format("\t# Load Array\n");
+		checkArrayBounds(arrayBase, index);
+
 		// 1. Add 1 to index to skip length metadata
 		fileWriter.format("\taddi $v1,%s,1\n", regalloc.RegisterAllocator.getReg(index));
 		// 2. Multiply by 4 (shift left 2) because each array element is a 4-byte word
@@ -191,12 +219,14 @@ public class MipsGenerator {
 		fileWriter.format("\tadd $v1,$v1,%s\n", regalloc.RegisterAllocator.getReg(arrayBase));
 		// 4. Load from address
 		fileWriter.format("\tlw %s,0($v1)\n", regalloc.RegisterAllocator.getReg(dst));
-		// 5. End of load array
+		// 5. End of Load Array
 		fileWriter.format("\t# End of Load Array\n");
 	}
 
 	public void storeArray(Temp arrayBase, Temp index, Temp src) {
 		fileWriter.format("\t# Store Array\n");
+		checkArrayBounds(arrayBase, index);
+
 		// 1. Add 1 to index to skip length metadata
 		fileWriter.format("\taddi $v1,%s,1\n", regalloc.RegisterAllocator.getReg(index));
 		// 2. Multiply by 4 (shift left 2)
