@@ -45,6 +45,109 @@ public class MipsGenerator {
 		fileWriter.format("\tsyscall\n");
 	}
 
+	public void stringConcat(Temp dst, Temp src1, Temp src2) {
+		fileWriter.format("\t# Inline String Concatenation\n");
+		String labelLen1 = ir.IrCommand.getFreshLabel("sc_len1");
+		String labelLen2Decide = ir.IrCommand.getFreshLabel("sc_len2_decide");
+		String labelLen2 = ir.IrCommand.getFreshLabel("sc_len2");
+		String labelAlloc = ir.IrCommand.getFreshLabel("sc_alloc");
+		String labelCopy1 = ir.IrCommand.getFreshLabel("sc_copy1");
+		String labelCopy2Decide = ir.IrCommand.getFreshLabel("sc_copy2_decide");
+		String labelCopy2 = ir.IrCommand.getFreshLabel("sc_copy2");
+		String labelEnd = ir.IrCommand.getFreshLabel("sc_end");
+
+		String rSrc1 = regalloc.RegisterAllocator.getReg(src1);
+		String rSrc2 = regalloc.RegisterAllocator.getReg(src2);
+		String rDst = regalloc.RegisterAllocator.getReg(dst);
+
+		// Push registers we are about to use to preserve their values
+		// We use $s0-$s4 for internal logic so we don't clobber any $tX registers
+		// that might be assigned to rSrc1, rSrc2, or rDst by the RegisterAllocator!
+		fileWriter.format("\tsubu $sp, $sp, 32\n");
+		fileWriter.format("\tsw $s0, 0($sp)\n");
+		fileWriter.format("\tsw $s1, 4($sp)\n");
+		fileWriter.format("\tsw $s2, 8($sp)\n");
+		fileWriter.format("\tsw $s3, 12($sp)\n");
+		fileWriter.format("\tsw $s4, 16($sp)\n");
+		fileWriter.format("\tsw $a0, 20($sp)\n");
+		fileWriter.format("\tsw $v1, 24($sp)\n");
+		fileWriter.format("\tsw $v0, 28($sp)\n");
+
+		// Length of string 1
+		fileWriter.format("\tli $s1, 0\n");
+		fileWriter.format("\tmove $s2, %s\n", rSrc1);
+		fileWriter.format("%s:\n", labelLen1);
+		fileWriter.format("\tlb $s3, 0($s2)\n");
+		fileWriter.format("\tbeqz $s3, %s\n", labelLen2Decide);
+		fileWriter.format("\taddi $s1, $s1, 1\n");
+		fileWriter.format("\taddi $s2, $s2, 1\n");
+		fileWriter.format("\tj %s\n", labelLen1);
+
+		// Length of string 2
+		fileWriter.format("%s:\n", labelLen2Decide);
+		fileWriter.format("\tli $s4, 0\n");
+		fileWriter.format("\tmove $s2, %s\n", rSrc2);
+		fileWriter.format("%s:\n", labelLen2);
+		fileWriter.format("\tlb $s3, 0($s2)\n");
+		fileWriter.format("\tbeqz $s3, %s\n", labelAlloc);
+		fileWriter.format("\taddi $s4, $s4, 1\n");
+		fileWriter.format("\taddi $s2, $s2, 1\n");
+		fileWriter.format("\tj %s\n", labelLen2);
+
+		// Allocate space (len1 + len2 + 1)
+		fileWriter.format("%s:\n", labelAlloc);
+		fileWriter.format("\tadd $a0, $s1, $s4\n");
+		fileWriter.format("\taddi $a0, $a0, 1\n");
+		fileWriter.format("\tli $v0, 9\n"); // syscall sbrk
+		fileWriter.format("\tsyscall\n");
+
+		// $v0 has new pointer.
+		fileWriter.format("\tmove $s0, $v0\n"); // $s0 = writing cursor
+		fileWriter.format("\tmove $v1, $v0\n"); // $v1 = base pointer backup
+
+		// Copy String 1
+		fileWriter.format("\tmove $s2, %s\n", rSrc1);
+		fileWriter.format("%s:\n", labelCopy1);
+		fileWriter.format("\tlb $s3, 0($s2)\n");
+		fileWriter.format("\tbeqz $s3, %s\n", labelCopy2Decide);
+		fileWriter.format("\tsb $s3, 0($s0)\n");
+		fileWriter.format("\taddi $s2, $s2, 1\n");
+		fileWriter.format("\taddi $s0, $s0, 1\n");
+		fileWriter.format("\tj %s\n", labelCopy1);
+
+		// Copy String 2
+		fileWriter.format("%s:\n", labelCopy2Decide);
+		fileWriter.format("\tmove $s2, %s\n", rSrc2);
+		fileWriter.format("%s:\n", labelCopy2);
+		fileWriter.format("\tlb $s3, 0($s2)\n");
+		fileWriter.format("\tbeqz $s3, %s\n", labelEnd);
+		fileWriter.format("\tsb $s3, 0($s0)\n");
+		fileWriter.format("\taddi $s2, $s2, 1\n");
+		fileWriter.format("\taddi $s0, $s0, 1\n");
+		fileWriter.format("\tj %s\n", labelCopy2);
+
+		// End string
+		fileWriter.format("%s:\n", labelEnd);
+		fileWriter.format("\tli $s3, 0\n");
+		fileWriter.format("\tsb $s3, 0($s0)\n");
+
+		// Map return value to proper mapped string destination register before popping
+		fileWriter.format("\tmove %s, $v1\n", rDst);
+
+		// Pop registers to restore values
+		fileWriter.format("\tlw $s0, 0($sp)\n");
+		fileWriter.format("\tlw $s1, 4($sp)\n");
+		fileWriter.format("\tlw $s2, 8($sp)\n");
+		fileWriter.format("\tlw $s3, 12($sp)\n");
+		fileWriter.format("\tlw $s4, 16($sp)\n");
+		fileWriter.format("\tlw $a0, 20($sp)\n");
+		fileWriter.format("\tlw $v1, 24($sp)\n");
+		fileWriter.format("\tlw $v0, 28($sp)\n");
+		fileWriter.format("\taddu $sp, $sp, 32\n");
+
+		fileWriter.format("\t# Inline String Concatenation End\n");
+	}
+
 	/**************************/
 	/* Memory allocation */
 	/**************************/
@@ -263,7 +366,7 @@ public class MipsGenerator {
 		fileWriter.format("\tjal %s\n", funcName);
 
 		if (numArgs > 0) {
-			fileWriter.format("\taddu $sp,$sp,%d\n", numArgs * 4);
+			fileWriter.format("\taddu $sp,$sp,%d\n", numArgs * WORD_SIZE);
 		}
 
 		if (retVal != null) {
@@ -293,10 +396,6 @@ public class MipsGenerator {
 	protected MipsGenerator() {
 	}
 
-	public void init(PrintWriter fileWriter) {
-		this.fileWriter = fileWriter;
-	}
-
 	/******************************/
 	/* GET SINGLETON INSTANCE ... */
 	/******************************/
@@ -306,59 +405,44 @@ public class MipsGenerator {
 			/* [0] The instance itself ... */
 			/*******************************/
 			instance = new MipsGenerator();
-
-			if (instance.fileWriter == null) {
-				try {
-					/*********************************************************************************/
-					/*
-					 * [1] Open the MIPS text file and write data section with error message strings
-					 */
-					/*********************************************************************************/
-					String dirname = "./output/";
-					String filename = String.format("MIPS.txt");
-
-					/***************************************/
-					/* [2] Open MIPS text file for writing */
-					/***************************************/
-					instance.fileWriter = new PrintWriter(dirname + filename);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-
-			/*****************************************************/
-			/* [3] Print data section with error message strings */
-			/*****************************************************/
-			instance.fileWriter.print(".data\n");
-			instance.fileWriter.print("string_access_violation: .asciiz \"Access Violation\"\n");
-			instance.fileWriter.print("string_illegal_div_by_0: .asciiz \"Illegal Division By Zero\"\n");
-			instance.fileWriter.print("string_invalid_ptr_dref: .asciiz \"Invalid Pointer Dereference\"\n");
-
-			/*********************************************************/
-			/* [4] Emit the MIPS code for those errors */
-			/*********************************************************/
-			instance.fileWriter.print(".text\n");
-			instance.fileWriter.print("error_string_access_violation:\n");
-			instance.fileWriter.print("\tli $v0,4\n");
-			instance.fileWriter.print("\tla $a0,string_access_violation\n");
-			instance.fileWriter.print("\tsyscall\n");
-			instance.fileWriter.print("\tli $v0,10\n");
-			instance.fileWriter.print("\tsyscall\n");
-
-			instance.fileWriter.print("error_illegal_div_by_0:\n");
-			instance.fileWriter.print("\tli $v0,4\n");
-			instance.fileWriter.print("\tla $a0,string_illegal_div_by_0\n");
-			instance.fileWriter.print("\tsyscall\n");
-			instance.fileWriter.print("\tli $v0,10\n");
-			instance.fileWriter.print("\tsyscall\n");
-
-			instance.fileWriter.print("error_invalid_ptr_dref:\n");
-			instance.fileWriter.print("\tli $v0,4\n");
-			instance.fileWriter.print("\tla $a0,string_invalid_ptr_dref\n");
-			instance.fileWriter.print("\tsyscall\n");
-			instance.fileWriter.print("\tli $v0,10\n");
-			instance.fileWriter.print("\tsyscall\n");
 		}
 		return instance;
+	}
+
+	public void init(PrintWriter fileWriter) {
+		this.fileWriter = fileWriter;
+
+		/*****************************************************/
+		/* [3] Print data section with error message strings */
+		/*****************************************************/
+		this.fileWriter.print(".data\n");
+		this.fileWriter.print("string_access_violation: .asciiz \"Access Violation\"\n");
+		this.fileWriter.print("string_illegal_div_by_0: .asciiz \"Illegal Division By Zero\"\n");
+		this.fileWriter.print("string_invalid_ptr_dref: .asciiz \"Invalid Pointer Dereference\"\n");
+
+		/*********************************************************/
+		/* [4] Emit the MIPS code for those errors */
+		/*********************************************************/
+		this.fileWriter.print(".text\n");
+		this.fileWriter.print("error_access_violation:\n");
+		this.fileWriter.print("\tli $v0,4\n");
+		this.fileWriter.print("\tla $a0,string_access_violation\n");
+		this.fileWriter.print("\tsyscall\n");
+		this.fileWriter.print("\tli $v0,10\n");
+		this.fileWriter.print("\tsyscall\n");
+
+		this.fileWriter.print("error_illegal_div_by_0:\n");
+		this.fileWriter.print("\tli $v0,4\n");
+		this.fileWriter.print("\tla $a0,string_illegal_div_by_0\n");
+		this.fileWriter.print("\tsyscall\n");
+		this.fileWriter.print("\tli $v0,10\n");
+		this.fileWriter.print("\tsyscall\n");
+
+		this.fileWriter.print("error_invalid_ptr_dref:\n");
+		this.fileWriter.print("\tli $v0,4\n");
+		this.fileWriter.print("\tla $a0,string_invalid_ptr_dref\n");
+		this.fileWriter.print("\tsyscall\n");
+		this.fileWriter.print("\tli $v0,10\n");
+		this.fileWriter.print("\tsyscall\n");
 	}
 }
