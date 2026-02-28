@@ -1,17 +1,17 @@
 package ast;
 
 import types.*;
+import ir.*;
+import temp.*;
 
-public class AstVarSubscript extends AstVar
-{
+public class AstVarSubscript extends AstVar {
 	public AstVar var;
 	public AstExp subscript;
 
 	/******************/
 	/* CONSTRUCTOR(S) */
 	/******************/
-	public AstVarSubscript(AstVar var, AstExp subscript, int lineNumber)
-	{
+	public AstVarSubscript(AstVar var, AstExp subscript, int lineNumber) {
 		/******************************/
 		/* SET A UNIQUE SERIAL NUMBER */
 		/******************************/
@@ -33,8 +33,7 @@ public class AstVarSubscript extends AstVar
 	/*****************************************************/
 	/* The printing message for a subscript var AST node */
 	/*****************************************************/
-	public void printMe()
-	{
+	public void printMe() {
 		/*************************************/
 		/* AST NODE TYPE = AST SUBSCRIPT VAR */
 		/*************************************/
@@ -43,78 +42,91 @@ public class AstVarSubscript extends AstVar
 		/****************************************/
 		/* RECURSIVELY PRINT VAR + SUBSCRIPT ... */
 		/****************************************/
-		if (var != null) var.printMe();
-		if (subscript != null) subscript.printMe();
+		if (var != null)
+			var.printMe();
+		if (subscript != null)
+			subscript.printMe();
 
 		/***************************************/
 		/* PRINT Node to AST GRAPHVIZ DOT file */
 		/***************************************/
 		AstGraphviz.getInstance().logNode(
 				serialNumber,
-			"SUBSCRIPT\nVAR\n...[...]");
+				"SUBSCRIPT\nVAR\n...[...]");
 
 		/****************************************/
 		/* PRINT Edges to AST GRAPHVIZ DOT file */
 		/****************************************/
-		if (var       != null) AstGraphviz.getInstance().logEdge(serialNumber,var.serialNumber);
-		if (subscript != null) AstGraphviz.getInstance().logEdge(serialNumber,subscript.serialNumber);
+		if (var != null)
+			AstGraphviz.getInstance().logEdge(serialNumber, var.serialNumber);
+		if (subscript != null)
+			AstGraphviz.getInstance().logEdge(serialNumber, subscript.serialNumber);
 	}
 
-	public Type semantMe() throws SemanticException
-	{
+	public Type semantMe() throws SemanticException {
 		Type t = null;
 		Type subscriptType = null;
 
 		/******************************/
 		/* [1] Recursively semant var */
 		/******************************/
-		if (var != null) t = var.semantMe();
+		if (var != null)
+			t = var.semantMe();
 
 		/****************************/
-		/* [2] Check for null type  */
+		/* [2] Check for null type */
 		/****************************/
-		if (t == null)
-		{
+		if (t == null) {
 			throw new SemanticException("variable has no type", lineNumber);
 		}
 
 		/*********************************/
 		/* [3] Make sure type is an array */
 		/*********************************/
-		if (!t.isArray())
-		{
+		if (!t.isArray()) {
 			throw new SemanticException("cannot subscript non-array variable", lineNumber);
 		}
 
 		/**************************************/
 		/* [4] Semant the subscript expression */
 		/**************************************/
-		if (subscript != null)
-		{
+		if (subscript != null) {
 			subscriptType = subscript.semantMe();
 		}
 
 		/********************************************/
-		/* [5] Check that subscript type is int     */
+		/* [5] Check that subscript type is int */
 		/********************************************/
-		if (subscriptType != TypeInt.getInstance())
-		{
+		if (subscriptType != TypeInt.getInstance()) {
 			throw new SemanticException("array subscript must be of type int", lineNumber);
 		}
 
 		/********************************************************/
-		/* [6] Check if subscript is a constant >= 0           */
+		/* [6] Check if subscript is a constant >= 0 */
 		/********************************************************/
 		Integer constantSubscript = subscript.tryEvaluateConstant();
-		if (constantSubscript != null && constantSubscript < 0)
-		{
+		if (constantSubscript != null && constantSubscript < 0) {
 			throw new SemanticException("array subscript must be >= 0", lineNumber);
 		}
 
 		/********************************************************/
-		/* [7] Return the element type of the array            */
+		/* [7] Return the element type of the array */
 		/********************************************************/
 		TypeArray arrayType = (TypeArray) t;
 		return arrayType.elementType;
+	}
+
+	public Temp irMe() {
+		// 1. Evaluate array base pointer
+		Temp arrayBase = var.irMe();
+		// 2. Evaluate index
+		Temp index = subscript.irMe();
+		// 3. Get free temp for destination
+		Temp dst = TempFactory.getInstance().getFreshTemp();
+
+		// 4. Output IR load array
+		Ir.getInstance().AddIrCommand(new IrCommandLoadArray(dst, arrayBase, index));
+
+		return dst;
 	}
 }

@@ -58,6 +58,60 @@ public class MipsGenerator {
 		fileWriter.format("\tla Temp_%d,%s\n", dstIdx, label);
 	}
 
+	public void allocateArray(Temp dst, Temp size) {
+		int dstIdx = dst.getSerialNumber();
+		int sizeIdx = size.getSerialNumber();
+		fileWriter.format("\t# Allocate Array\n");
+		// 1. Add 1 to size for the length metadata
+		fileWriter.format("\taddi $a0,Temp_%d,1\n", sizeIdx);
+		// 2. Multiply by 4 (shift left 2) because each array element is a 4-byte word
+		fileWriter.format("\tsll $a0,$a0,2\n");
+		fileWriter.format("\tli $v0,9\n");
+		fileWriter.format("\tsyscall\n");
+		// 3. Store result pointer in dst
+		fileWriter.format("\tmove Temp_%d,$v0\n", dstIdx);
+		// 4. Store original size (length) at 0(dst)
+		fileWriter.format("\tsw Temp_%d,0(Temp_%d)\n", sizeIdx, dstIdx);
+		// 5. End of allocate array
+		fileWriter.format("\t# End of Allocate Array\n");
+	}
+
+	public void loadArray(Temp dst, Temp arrayBase, Temp index) {
+		int dstIdx = dst.getSerialNumber();
+		int baseIdx = arrayBase.getSerialNumber();
+		int indexIdx = index.getSerialNumber();
+
+		fileWriter.format("\t# Load Array\n");
+		// 1. Add 1 to index to skip length metadata
+		fileWriter.format("\taddi $t0,Temp_%d,1\n", indexIdx);
+		// 2. Multiply by 4 (shift left 2) because each array element is a 4-byte word
+		fileWriter.format("\tsll $t0,$t0,2\n");
+		// 3. Add offset to base address
+		fileWriter.format("\tadd $t0,$t0,Temp_%d\n", baseIdx);
+		// 4. Load from address
+		fileWriter.format("\tlw Temp_%d,0($t0)\n", dstIdx);
+		// 5. End of load array
+		fileWriter.format("\t# End of Load Array\n");
+	}
+
+	public void storeArray(Temp arrayBase, Temp index, Temp src) {
+		int baseIdx = arrayBase.getSerialNumber();
+		int indexIdx = index.getSerialNumber();
+		int srcIdx = src.getSerialNumber();
+
+		fileWriter.format("\t# Store Array\n");
+		// 1. Add 1 to index to skip length metadata
+		fileWriter.format("\taddi $t0,Temp_%d,1\n", indexIdx);
+		// 2. Multiply by 4 (shift left 2)
+		fileWriter.format("\tsll $t0,$t0,2\n");
+		// 3. Add offset to base address
+		fileWriter.format("\tadd $t0,$t0,Temp_%d\n", baseIdx);
+		// 4. Store src at address
+		fileWriter.format("\tsw Temp_%d,0($t0)\n", srcIdx);
+		// 5. End of store array
+		fileWriter.format("\t# Store Array End\n");
+	}
+
 	/**************************/
 	/* Global variables */
 	/**************************/

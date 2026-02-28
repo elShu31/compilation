@@ -119,6 +119,11 @@ public class AstStmtAssignNew extends AstStmt {
 				boolean isGlobal = ((AstVarSimple) var).isGlobal;
 				int fpOffset = ((AstVarSimple) var).fpOffset;
 				Ir.getInstance().AddIrCommand(new IrCommandStore(varName, scopeOffset, isGlobal, fpOffset, src));
+			} else if (var instanceof AstVarSubscript) {
+				AstVarSubscript subVar = (AstVarSubscript) var;
+				Temp arrayBase = subVar.var.irMe();
+				Temp index = subVar.subscript.irMe();
+				Ir.getInstance().AddIrCommand(new IrCommandStoreArray(arrayBase, index, src));
 			}
 		}
 		return null;

@@ -103,17 +103,25 @@ public class AstStmtAssign extends AstStmt {
 
 	public Temp irMe() {
 		Temp src = exp.irMe();
-		/****************************************/
-		/* Get the scope offset for this var */
-		/* from the symbol table */
-		/****************************************/
+
 		if (var instanceof AstVarSimple) {
+			/****************************************/
+			/* Get the scope offset for this var */
+			/* from the symbol table */
+			/****************************************/
 			String varName = ((AstVarSimple) var).name;
 			int scopeOffset = ((AstVarSimple) var).getScopeOffset();
 			boolean isGlobal = ((AstVarSimple) var).isGlobal;
 			int fpOffset = ((AstVarSimple) var).fpOffset;
 			Ir.getInstance().AddIrCommand(new IrCommandStore(varName, scopeOffset, isGlobal, fpOffset, src));
+		} else if (var instanceof AstVarSubscript) {
+			AstVarSubscript subVar = (AstVarSubscript) var;
+			Temp arrayBase = subVar.var.irMe();
+			Temp index = subVar.subscript.irMe();
+
+			Ir.getInstance().AddIrCommand(new IrCommandStoreArray(arrayBase, index, src));
 		}
+
 		return null;
 	}
 }
