@@ -233,6 +233,24 @@ public class MipsGenerator {
 		epilogue(funcName);
 	}
 
+	public void pushArg(Temp arg) {
+		int idx = arg.getSerialNumber();
+		fileWriter.format("\tsubu $sp,$sp,4\n");
+		fileWriter.format("\tsw Temp_%d,0($sp)\n", idx);
+	}
+
+	public void callFunc(String funcName, int numArgs, Temp retVal) {
+		fileWriter.format("\tjal %s\n", funcName);
+
+		if (numArgs > 0) {
+			fileWriter.format("\taddu $sp,$sp,%d\n", numArgs * 4);
+		}
+
+		if (retVal != null) {
+			fileWriter.format("\tmove Temp_%d,$v0\n", retVal.getSerialNumber());
+		}
+	}
+
 	/**************************************/
 	/* USUAL SINGLETON IMPLEMENTATION ... */
 	/**************************************/
