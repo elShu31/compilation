@@ -240,21 +240,44 @@ public class MipsGenerator {
 	/**************************/
 	public void li(Temp t, int value) {
 		fileWriter.format("\tli %s,%d\n", regalloc.RegisterAllocator.getReg(t), value);
+		clampInt(t);
+	}
+
+	private void clampInt(Temp dst) {
+		String rDst = regalloc.RegisterAllocator.getReg(dst);
+		String lSkipUpper = ir.IrCommand.getFreshLabel("clamp_skip_upper");
+		String lSkipLower = ir.IrCommand.getFreshLabel("clamp_skip_lower");
+
+		fileWriter.format("\t# Clamp %s to [-32768, 32767]\n", rDst);
+		// Upper bound
+		fileWriter.format("\tli $v1, 32767\n");
+		fileWriter.format("\tble %s, $v1, %s\n", rDst, lSkipUpper);
+		fileWriter.format("\tli %s, 32767\n", rDst);
+		fileWriter.format("%s:\n", lSkipUpper);
+
+		// Lower bound
+		fileWriter.format("\tli $v1, -32768\n");
+		fileWriter.format("\tbge %s, $v1, %s\n", rDst, lSkipLower);
+		fileWriter.format("\tli %s, -32768\n", rDst);
+		fileWriter.format("%s:\n", lSkipLower);
 	}
 
 	public void add(Temp dst, Temp oprnd1, Temp oprnd2) {
 		fileWriter.format("\tadd %s,%s,%s\n", regalloc.RegisterAllocator.getReg(dst),
 				regalloc.RegisterAllocator.getReg(oprnd1), regalloc.RegisterAllocator.getReg(oprnd2));
+		clampInt(dst);
 	}
 
 	public void mul(Temp dst, Temp oprnd1, Temp oprnd2) {
 		fileWriter.format("\tmul %s,%s,%s\n", regalloc.RegisterAllocator.getReg(dst),
 				regalloc.RegisterAllocator.getReg(oprnd1), regalloc.RegisterAllocator.getReg(oprnd2));
+		clampInt(dst);
 	}
 
 	public void sub(Temp dst, Temp oprnd1, Temp oprnd2) {
 		fileWriter.format("\tsub %s,%s,%s\n", regalloc.RegisterAllocator.getReg(dst),
 				regalloc.RegisterAllocator.getReg(oprnd1), regalloc.RegisterAllocator.getReg(oprnd2));
+		clampInt(dst);
 	}
 
 	public void div(Temp dst, Temp oprnd1, Temp oprnd2) {
@@ -268,6 +291,7 @@ public class MipsGenerator {
 		label(labelValidDiv);
 		fileWriter.format("\tdiv %s,%s,%s\n", regalloc.RegisterAllocator.getReg(dst),
 				regalloc.RegisterAllocator.getReg(oprnd1), regalloc.RegisterAllocator.getReg(oprnd2));
+		clampInt(dst);
 	}
 
 	public void label(String label) {
