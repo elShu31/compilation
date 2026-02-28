@@ -53,6 +53,11 @@ public class MipsGenerator {
 		fileWriter.format("\tmove Temp_%d,$v0\n", dstIdx);
 	}
 
+	public void la(Temp dst, String label) {
+		int dstIdx = dst.getSerialNumber();
+		fileWriter.format("\tla Temp_%d,%s\n", dstIdx, label);
+	}
+
 	/**************************/
 	/* Global variables */
 	/**************************/
@@ -130,12 +135,10 @@ public class MipsGenerator {
 	}
 
 	public void label(String label) {
-		if (label.equals("main")) {
+		if (!label.startsWith("Label_")) {
 			fileWriter.format(".text\n");
-			fileWriter.format("%s:\n", label);
-		} else {
-			fileWriter.format("%s:\n", label);
 		}
+		fileWriter.format("%s:\n", label);
 	}
 
 	/************************************/
@@ -248,6 +251,17 @@ public class MipsGenerator {
 
 		if (retVal != null) {
 			fileWriter.format("\tmove Temp_%d,$v0\n", retVal.getSerialNumber());
+		}
+	}
+
+	public void emitStrings(java.util.List<String> strings) {
+		if (strings.isEmpty()) {
+			return;
+		}
+
+		fileWriter.format(".data\n");
+		for (int i = 0; i < strings.size(); i++) {
+			fileWriter.format("\tstring_const_%d: .asciiz %s\n", i, strings.get(i));
 		}
 	}
 

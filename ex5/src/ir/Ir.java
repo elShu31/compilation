@@ -12,13 +12,15 @@ import java.util.List;
 /*******************/
 /* PROJECT IMPORTS */
 /*******************/
+import mips.*;
 
 public class Ir {
-	/****************************************/
-	/* Store IR commands in an ArrayList */
-	/* for easy iteration during analysis */
-	/****************************************/
 	private List<IrCommand> commands = new ArrayList<>();
+
+	/****************************************/
+	/* Store strings for .data section */
+	/****************************************/
+	private List<String> stringTable = new ArrayList<>();
 
 	/******************/
 	/* Add Ir command */
@@ -32,6 +34,16 @@ public class Ir {
 	/****************************************/
 	public List<IrCommand> getCommands() {
 		return commands;
+	}
+
+	/****************************************/
+	/* Add a string to the string pool */
+	/* Returns its assigned data label */
+	/****************************************/
+	public String addString(String value) {
+		int index = stringTable.size();
+		stringTable.add(value);
+		return "string_const_" + index;
 	}
 
 	/****************************************/
@@ -73,6 +85,10 @@ public class Ir {
 	}
 
 	public void mipsMe() {
+		// Output .data section strings first
+		MipsGenerator.getInstance().emitStrings(stringTable);
+
+		// Output commands inside .text
 		for (IrCommand cmd : commands) {
 			cmd.mipsMe();
 		}
