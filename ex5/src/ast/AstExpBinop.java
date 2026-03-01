@@ -140,6 +140,8 @@ public class AstExpBinop extends AstExp {
 				// Check if types are compatible for equality comparison
 				if (t1 == t2) {
 					// Same type - always valid
+					leftType = t1;
+					rightType = t2;
 					return TypeInt.getInstance();
 				}
 
@@ -233,7 +235,11 @@ public class AstExpBinop extends AstExp {
 				break;
 
 			case EQ:
-				Ir.getInstance().AddIrCommand(new IrCommandBinopEqIntegers(dst, t1, t2));
+				if (leftType == TypeString.getInstance() && rightType == TypeString.getInstance()) {
+					Ir.getInstance().AddIrCommand(new IrCommandBinopEqStrings(dst, t1, t2));
+				} else {
+					Ir.getInstance().AddIrCommand(new IrCommandBinopEqIntegers(dst, t1, t2));
+				}
 				break;
 
 			case LT:

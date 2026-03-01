@@ -149,6 +149,70 @@ public class MipsGenerator {
 		fileWriter.format("\t# Inline String Concatenation End\n");
 	}
 
+	public void stringCompareEq(Temp dst, Temp src1, Temp src2) {
+		fileWriter.format("\t# Inline String Equality Compare\n");
+		String labelLoop = ir.IrCommand.getFreshLabel("seq_loop");
+		String labelDiff = ir.IrCommand.getFreshLabel("seq_diff");
+		String labelAssignOne = ir.IrCommand.getFreshLabel("seq_AssignOne");
+		String labelAssignZero = ir.IrCommand.getFreshLabel("seq_AssignZero");
+		String labelEnd = ir.IrCommand.getFreshLabel("seq_end");
+
+		String rSrc1 = regalloc.RegisterAllocator.getReg(src1);
+		String rSrc2 = regalloc.RegisterAllocator.getReg(src2);
+		String rDst = regalloc.RegisterAllocator.getReg(dst);
+
+		// Push $s registers to preserve state
+		fileWriter.format("\tsubu $sp, $sp, 16\n");
+		fileWriter.format("\tsw $s0, 0($sp)\n");
+		fileWriter.format("\tsw $s1, 4($sp)\n");
+		fileWriter.format("\tsw $s2, 8($sp)\n");
+		fileWriter.format("\tsw $s3, 12($sp)\n");
+
+		// $s0 = cursor 1, $s1 = cursor 2
+		fileWriter.format("\tmove $s0, %s\n", rSrc1);
+		fileWriter.format("\tmove $s1, %s\n", rSrc2);
+
+		fileWriter.format("%s:\n", labelLoop);
+		fileWriter.format("\tlb $s2, 0($s0)\n"); // Load byte from string 1
+		fileWriter.format("\tlb $s3, 0($s1)\n"); // Load byte from string 2
+
+		// If bytes are not equal, the strings are not equal
+		fileWriter.format("\tbne $s2, $s3, %s\n", labelDiff);
+
+		// If bytes are equal AND equal to 0 (end of string), the strings are equal
+		fileWriter.format("\tbeqz $s2, %s\n", labelAssignOne);
+
+		// Otherwise, move to next byte and repeat
+		fileWriter.format("\taddi $s0, $s0, 1\n");
+		fileWriter.format("\taddi $s1, $s1, 1\n");
+		fileWriter.format("\tj %s\n", labelLoop);
+
+		// Different bytes -> return 0
+		fileWriter.format("%s:\n", labelDiff);
+		fileWriter.format("\tj %s\n", labelAssignZero);
+
+		// They are equal -> return 1
+		fileWriter.format("%s:\n", labelAssignOne);
+		fileWriter.format("\tli %s, 1\n", rDst);
+		fileWriter.format("\tj %s\n", labelEnd);
+
+		// They are not equal -> return 0
+		fileWriter.format("%s:\n", labelAssignZero);
+		fileWriter.format("\tli %s, 0\n", rDst);
+		fileWriter.format("\tj %s\n", labelEnd);
+
+		fileWriter.format("%s:\n", labelEnd);
+
+		// Pop registers to restore values
+		fileWriter.format("\tlw $s0, 0($sp)\n");
+		fileWriter.format("\tlw $s1, 4($sp)\n");
+		fileWriter.format("\tlw $s2, 8($sp)\n");
+		fileWriter.format("\tlw $s3, 12($sp)\n");
+		fileWriter.format("\taddu $sp, $sp, 16\n");
+
+		fileWriter.format("\t# Inline String Equality Compare End\n");
+	}
+
 	/**************************/
 	/* Memory allocation */
 	/**************************/
