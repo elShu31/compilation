@@ -8,6 +8,7 @@ public class AstDecClass extends AstNode{
     public String id;
     public String parentId; // can be null
     public AstFieldList fields;
+    public int classSize = 0;
 
     public AstDecClass(String id, String parentId, AstFieldList fields, int lineNumber){
         serialNumber = AstNodeSerialNumber.getFresh();
@@ -22,11 +23,12 @@ public class AstDecClass extends AstNode{
         if (parentId != null) {
             System.out.format("EXTENDS: %s\n", parentId);
         }
+        System.out.format("Size: %d\n", classSize);
         if (fields != null) fields.printMe();
 
         String label = (parentId != null) ?
-            String.format("CLASS\n%s\nEXTENDS %s", id, parentId) :
-            String.format("CLASS\n%s", id);
+            String.format("CLASS\n%s\nEXTENDS %s\nSize: %d", id, parentId, classSize) :
+            String.format("CLASS\n%s\nSize: %d", id, classSize);
 
         AstGraphviz.getInstance().logNode(serialNumber, label);
 
@@ -237,9 +239,46 @@ public class AstDecClass extends AstNode{
 		SymbolTable.getInstance().endScope();
 
 		/*********************************************************/
-		/* [6] Return value is irrelevant for class declarations */
+		/* [6] Calculate and save class size for backend use     */
+		/*********************************************************/
+		this.classSize = calculateClassSize(classType);
+
+		/*********************************************************/
+		/* [7] Return value is irrelevant for class declarations */
 		/*********************************************************/
 		return null;
+	}
+
+	/******************************************************************/
+	/* Helper: Calculate class size in bytes                         */
+	/* formula: size = 4 (vt) + methods_size + fields_size           */
+	/******************************************************************/
+	private int calculateClassSize(TypeClass typeClass)
+	{
+		int numFields = 0;
+		Set<String> uniqueMethods = new HashSet<>();
+
+		TypeClass current = typeClass;
+		while (current != null)
+		{
+			for (TypeList it = current.dataMembers; it != null; it = it.tail)
+			{
+				if (it.head instanceof TypeField)
+				{
+					numFields++;
+				}
+				else if (it.head instanceof TypeFunction)
+				{
+					uniqueMethods.add(it.head.name);
+				}
+			}
+			current = current.father;
+		}
+
+		// Virtual table = 4 bytes
+		// Each field = 4 bytes
+		// Each unique method = 4 bytes (in virtual table layout rules)
+		return 4 + (numFields * 4) + (uniqueMethods.size() * 4);
 	}
 
 	/******************************************************************/
