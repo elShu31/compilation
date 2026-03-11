@@ -2,10 +2,14 @@ package ast;
 
 import types.*;
 
+import ir.*;
+import temp.*;
+
 public class AstVarField extends AstVar
 {
 	public AstVar var;
 	public String fieldName;
+	public int offset = -1;
 	
 	/******************/
 	/* CONSTRUCTOR(S) */
@@ -45,13 +49,14 @@ public class AstVarField extends AstVar
 		/**********************************************/
 		if (var != null) var.printMe();
 		System.out.format("FIELD NAME( %s )\n",fieldName);
+		System.out.format("OFFSET: %d\n", offset);
 
 		/***************************************/
 		/* PRINT Node to AST GRAPHVIZ DOT file */
 		/***************************************/
 		AstGraphviz.getInstance().logNode(
 				serialNumber,
-			String.format("FIELD\nVAR\n...->%s",fieldName));
+			String.format("FIELD\nVAR\n...->%s\nOFFSET: %d",fieldName,offset));
 		
 		/****************************************/
 		/* PRINT Edges to AST GRAPHVIZ DOT file */
@@ -107,9 +112,22 @@ public class AstVarField extends AstVar
 		// If it's a field, return the field type
 		if (member instanceof TypeField)
 		{
+			this.offset = ((TypeField) member).offset;
 			return ((TypeField) member).fieldType;
 		}
 		// If it's a method, return the function type
 		return member;
+	}
+
+	/********************************************************/
+	/* IR generation for field access                       */
+	/********************************************************/
+	public Temp irMe()
+	{
+		Temp objectBase = var.irMe();
+		Temp dst = TempFactory.getInstance().getFreshTemp();
+		
+		Ir.getInstance().AddIrCommand(new IrCommandLoadField(dst, objectBase, offset));
+		return dst;
 	}
 }

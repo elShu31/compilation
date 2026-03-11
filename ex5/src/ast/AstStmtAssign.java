@@ -120,6 +120,10 @@ public class AstStmtAssign extends AstStmt {
 			Temp index = subVar.subscript.irMe();
 
 			Ir.getInstance().AddIrCommand(new IrCommandStoreArray(arrayBase, index, src));
+		} else if (var instanceof AstVarField) {
+			AstVarField fieldVar = (AstVarField) var;
+			Temp objectBase = fieldVar.var.irMe();
+			Ir.getInstance().AddIrCommand(new IrCommandStoreField(objectBase, fieldVar.offset, src));
 		}
 
 		return null;

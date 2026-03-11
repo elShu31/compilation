@@ -91,6 +91,7 @@ public class AstDecClass extends AstNode{
 		TypeList classMembers = null;
 		Set<String> memberNames = new HashSet<>();
 		List<AstDecFunc> methodsToProcess = new ArrayList<>();
+		int fieldOffset = -1; // initialized when the first field is processed
 
 		for (AstFieldList it = fields; it != null; it = it.tail)
 		{
@@ -127,7 +128,13 @@ public class AstDecClass extends AstNode{
 					throw new SemanticException("field cannot have void type", fieldVar.lineNumber);
 				}
 
-				classMembers = new TypeList(new TypeField(fieldType, fieldVar.id), classMembers);
+				// Compute inherited offset on first hit
+				if (fieldOffset == -1) {
+					fieldOffset = 4 + (calculateInheritedFieldCount(parentClass) * 4);
+				}
+
+				classMembers = new TypeList(new TypeField(fieldType, fieldVar.id, fieldOffset), classMembers);
+				fieldOffset += 4;
 			}
 			else if (it.head.decFunc != null)
 			{
@@ -220,8 +227,10 @@ public class AstDecClass extends AstNode{
 			{
 				// Field - add to scope (type already validated above)
 				AstDecVar fieldVar = it.head.decVar;
-				Type fieldType = SymbolTable.getInstance().find(fieldVar.type.typeName);
-				SymbolTable.getInstance().enter(fieldVar.id, new TypeField(fieldType, fieldVar.id));
+
+				// Retrieve the TypeField we already constructed previously so that we capture its offset properly
+				Type fieldTypeFromMembers = getTypeFieldFromMembers(classMembers, fieldVar.id);
+				SymbolTable.getInstance().enter(fieldVar.id, fieldTypeFromMembers);
 			}
 			else if (it.head.decFunc != null)
 			{
@@ -280,6 +289,42 @@ public class AstDecClass extends AstNode{
 		// Each field = 4 bytes
 		// Each unique method = 4 bytes (in virtual table layout rules)
 		return 4 + (numFields * 4) + (uniqueMethods.size() * 4);
+	}
+
+	/******************************************************************/
+	/* Helper: Calculate how many fields are inherited by parent     */
+	/******************************************************************/
+	private int calculateInheritedFieldCount(TypeClass parent)
+	{
+		int count = 0;
+		TypeClass current = parent;
+		while (current != null)
+		{
+			for (TypeList it = current.dataMembers; it != null; it = it.tail)
+			{
+				if (it.head instanceof TypeField)
+				{
+					count++;
+				}
+			}
+			current = current.father;
+		}
+		return count;
+	}
+
+	/******************************************************************/
+	/* Helper: Find the instantiated TypeField from internal members */
+	/******************************************************************/
+	private Type getTypeFieldFromMembers(TypeList members, String id)
+	{
+		for (TypeList it = members; it != null; it = it.tail)
+		{
+			if (it.head instanceof TypeField && it.head.name.equals(id))
+			{
+				return it.head;
+			}
+		}
+		return null;
 	}
 
 	/******************************************************************/

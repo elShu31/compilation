@@ -255,6 +255,32 @@ public class MipsGenerator {
 		fileWriter.format("\t# End of Allocate Class\n");
 	}
 
+	public void loadField(Temp dst, Temp objectBase, int offset) {
+		fileWriter.format("\t# Load field from offset %d\n", offset);
+		String rBase = regalloc.RegisterAllocator.getReg(objectBase);
+		String rDst = regalloc.RegisterAllocator.getReg(dst);
+		
+		// Null pointer check
+		fileWriter.format("\tbeqz %s,error_invalid_ptr_dref\n", rBase);
+		
+		// Load field memory
+		fileWriter.format("\tlw %s,%d(%s)\n", rDst, offset, rBase);
+		fileWriter.format("\t# End Load field\n");
+	}
+
+	public void storeField(Temp objectBase, int offset, Temp src) {
+		fileWriter.format("\t# Store field to offset %d\n", offset);
+		String rBase = regalloc.RegisterAllocator.getReg(objectBase);
+		String rSrc = regalloc.RegisterAllocator.getReg(src);
+		
+		// Null pointer check
+		fileWriter.format("\tbeqz %s,error_invalid_ptr_dref\n", rBase);
+		
+		// Store field memory
+		fileWriter.format("\tsw %s,%d(%s)\n", rSrc, offset, rBase);
+		fileWriter.format("\t# End Store field\n");
+	}
+
 	private void checkArrayBounds(Temp arrayBase, Temp index) {
 		String rBase = regalloc.RegisterAllocator.getReg(arrayBase);
 		String rIndex = regalloc.RegisterAllocator.getReg(index);
