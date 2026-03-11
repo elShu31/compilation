@@ -246,6 +246,15 @@ public class MipsGenerator {
 		fileWriter.format("\t# End of Allocate Array\n");
 	}
 
+	public void allocateClass(Temp dst, int size, String className) {
+		fileWriter.format("\t# Allocate Class %s\n", className);
+		fileWriter.format("\tli $a0,%d\n", size);
+		fileWriter.format("\tli $v0,9\n");
+		fileWriter.format("\tsyscall\n");
+		fileWriter.format("\tmove %s,$v0\n", regalloc.RegisterAllocator.getReg(dst));
+		fileWriter.format("\t# End of Allocate Class\n");
+	}
+
 	private void checkArrayBounds(Temp arrayBase, Temp index) {
 		String rBase = regalloc.RegisterAllocator.getReg(arrayBase);
 		String rIndex = regalloc.RegisterAllocator.getReg(index);

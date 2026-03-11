@@ -8,6 +8,7 @@ import ir.*;
 public class AstExpNew extends AstExp {
     public AstExp exp; // can be null for simple new Type
     public AstType type;
+    public TypeClass classType = null;
 
     // Constructor for: new Type
     public AstExpNew(AstType type, int lineNumber) {
@@ -99,6 +100,7 @@ public class AstExpNew extends AstExp {
                 throw new SemanticException("can only instantiate class types with 'new'", lineNumber);
             }
 
+            this.classType = (TypeClass) t;
             return t;
         }
     }
@@ -113,9 +115,11 @@ public class AstExpNew extends AstExp {
             return dst;
         } else {
             // Class allocation block
-            // (Assuming class allocation is ignored temporarily based on instructions,
-            // or simply returns null for now until object memory is defined)
-            return null;
+            Temp dst = TempFactory.getInstance().getFreshTemp();
+            if (classType != null) {
+                Ir.getInstance().AddIrCommand(new IrCommandAllocateClass(dst, classType.classSize, classType.name));
+            }
+            return dst;
         }
     }
 }

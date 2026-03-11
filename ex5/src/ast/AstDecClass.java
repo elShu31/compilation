@@ -242,6 +242,7 @@ public class AstDecClass extends AstNode{
 		/* [6] Calculate and save class size for backend use     */
 		/*********************************************************/
 		this.classSize = calculateClassSize(classType);
+		classType.classSize = this.classSize;
 
 		/*********************************************************/
 		/* [7] Return value is irrelevant for class declarations */

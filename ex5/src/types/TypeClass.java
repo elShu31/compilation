@@ -13,6 +13,12 @@ public class TypeClass extends Type
 	/* packed together with the class methods         */
 	/**************************************************/
 	public TypeList dataMembers;
+
+	/**************************************************/
+	/* The required memory allocation footprint for   */
+	/* instantiating objects of this class            */
+	/**************************************************/
+	public int classSize = 0;
 	
 	/****************/
 	/* CTROR(S) ... */
