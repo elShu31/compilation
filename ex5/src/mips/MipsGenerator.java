@@ -259,10 +259,10 @@ public class MipsGenerator {
 		fileWriter.format("\t# Load field from offset %d\n", offset);
 		String rBase = regalloc.RegisterAllocator.getReg(objectBase);
 		String rDst = regalloc.RegisterAllocator.getReg(dst);
-		
+
 		// Null pointer check
 		fileWriter.format("\tbeqz %s,error_invalid_ptr_dref\n", rBase);
-		
+
 		// Load field memory
 		fileWriter.format("\tlw %s,%d(%s)\n", rDst, offset, rBase);
 		fileWriter.format("\t# End Load field\n");
@@ -272,10 +272,10 @@ public class MipsGenerator {
 		fileWriter.format("\t# Store field to offset %d\n", offset);
 		String rBase = regalloc.RegisterAllocator.getReg(objectBase);
 		String rSrc = regalloc.RegisterAllocator.getReg(src);
-		
+
 		// Null pointer check
 		fileWriter.format("\tbeqz %s,error_invalid_ptr_dref\n", rBase);
-		
+
 		// Store field memory
 		fileWriter.format("\tsw %s,%d(%s)\n", rSrc, offset, rBase);
 		fileWriter.format("\t# End Store field\n");
@@ -486,6 +486,13 @@ public class MipsGenerator {
 
 		fileWriter.format("\tmove $fp,$sp\n");
 
+		// RegisterAllocator assigns $t0-$t9. So we preserve any active $t register.
+		fileWriter.format("\t# Preserve caller registers\n");
+		fileWriter.format("\tsubu $sp,$sp,%d\n", RegisterAllocator.K * WORD_SIZE);
+		for (int i = 0; i < RegisterAllocator.K; i++) {
+			fileWriter.format("\tsw $t%d,%d($sp)\n", i, i * WORD_SIZE);
+		}
+
 		if (localVarsSize > 0) {
 			fileWriter.format("\tsubu $sp,$sp,%d\n", localVarsSize);
 		}
@@ -496,6 +503,10 @@ public class MipsGenerator {
 			fileWriter.format("\tli $v0,10\n");
 			fileWriter.format("\tsyscall\n");
 		} else {
+			fileWriter.format("\t# Restore caller registers\n");
+			for (int i = RegisterAllocator.K - 1; i >= 0; i--) {
+				fileWriter.format("\tlw $t%d,%d($sp)\n", i, i * WORD_SIZE);
+			}
 			fileWriter.format("\tmove $sp,$fp\n");
 			fileWriter.format("\tlw $fp, 0($sp)\n");
 			fileWriter.format("\tlw $ra, 4($sp)\n");
@@ -517,22 +528,7 @@ public class MipsGenerator {
 	}
 
 	public void callFunc(String funcName, int numArgs, Temp retVal) {
-		// Push registers to protect them before entering jal
-		// RegisterAllocator assigns $t0-$t9. So we preserve any active $t register.
-		fileWriter.format("\t# Preserve caller registers\n");
-		fileWriter.format("\tsubu $sp,$sp,%d\n", RegisterAllocator.K * WORD_SIZE);
-		for (int i = 0; i < RegisterAllocator.K; i++) {
-			fileWriter.format("\tsw $t%d,%d($sp)\n", i, i * WORD_SIZE);
-		}
-
 		fileWriter.format("\tjal %s\n", funcName);
-
-		// After jal, pop all preserved $t0-$t9
-		fileWriter.format("\t# Restore caller registers\n");
-		for (int i = RegisterAllocator.K - 1; i >= 0; i--) {
-			fileWriter.format("\tlw $t%d,%d($sp)\n", i, i * WORD_SIZE);
-		}
-		fileWriter.format("\taddu $sp,$sp,%d\n", RegisterAllocator.K * WORD_SIZE);
 
 		if (numArgs > 0) {
 			fileWriter.format("\taddu $sp,$sp,%d\n", numArgs * WORD_SIZE);
