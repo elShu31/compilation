@@ -75,4 +75,18 @@ for T in "${TESTS[@]}"; do
 done
 
 echo "--------------------------------"
+echo -n "Running TEST_31 VTable check... "
+java -jar "$COMPILER" "$INPUT_DIR/TEST_31_MethodOffsets.txt" "$MIPS_OUT" > "$TEMP_OUT" 2>&1
+grep "VTABLE LAYOUT" "$TEMP_OUT" > "$OUTPUT_DIR/vtable_out.txt"
+diff -b "$OUTPUT_DIR/vtable_out.txt" "$EXPECTED_DIR/TEST_31.txt" > /dev/null
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}PASSED${NC}"
+else
+    echo -e "${RED}FAILED${NC}"
+    echo "Differences:"
+    diff -u "$EXPECTED_DIR/TEST_31.txt" "$OUTPUT_DIR/vtable_out.txt"
+fi
+
+echo "--------------------------------"
 echo "Tests complete."
+

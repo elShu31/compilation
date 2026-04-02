@@ -20,6 +20,9 @@ public class MipsGenerator {
 	private PrintWriter fileWriter;
 
 	public void finalizeFile() {
+		/*******************************/
+		/* [2] Close file writer       */
+		/*******************************/
 		fileWriter.close();
 	}
 
@@ -251,6 +254,11 @@ public class MipsGenerator {
 		fileWriter.format("\tli $a0,%d\n", size);
 		fileWriter.format("\tli $v0,9\n");
 		fileWriter.format("\tsyscall\n");
+		
+		// Initialize vtable pointer at offset 0
+		fileWriter.format("\tla $a0,vt_%s\n", className);
+		fileWriter.format("\tsw $a0,0($v0)\n");
+
 		fileWriter.format("\tmove %s,$v0\n", regalloc.RegisterAllocator.getReg(dst));
 		fileWriter.format("\t# End of Allocate Class\n");
 	}
@@ -584,6 +592,21 @@ public class MipsGenerator {
 		this.fileWriter.print("string_access_violation: .asciiz \"Access Violation\"\n");
 		this.fileWriter.print("string_illegal_div_by_0: .asciiz \"Illegal Division By Zero\"\n");
 		this.fileWriter.print("string_invalid_ptr_dref: .asciiz \"Invalid Pointer Dereference\"\n");
+
+		/*****************************************************/
+		/* [3.5] Emit VTables into .data                      */
+		/*****************************************************/
+		if (!types.TypeClass.allClasses.isEmpty()) {
+			for (types.TypeClass tc : types.TypeClass.allClasses) {
+				fileWriter.format("vt_%s:\n", tc.name);
+				if (tc.vtable != null) {
+					for (types.TypeFunction method : tc.vtable) {
+						// Use OriginClass_MethodName as the label
+						fileWriter.format("\t.word %s_%s\n", method.originClass, method.name);
+					}
+				}
+			}
+		}
 
 		/*********************************************************/
 		/* [4] Emit the MIPS code for those errors */

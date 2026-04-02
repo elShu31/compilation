@@ -17,6 +17,12 @@ public class TypeFunction extends Type
 	/* virtual table layout. Computed during parsing */
 	/*************************************************/
 	public int offset = -1;
+
+	/**************************************************/
+	/* Name of the class where this method was        */
+	/* originally defined or overridden.              */
+	/**************************************************/
+	public String originClass;
 	
 	/****************/
 	/* CTROR(S) ... */

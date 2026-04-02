@@ -207,8 +207,13 @@ public class AstDecClass extends AstNode{
 		/************************************************/
 		computeMethodOffsets(classType);
 
+		/************************************************/
+		/* [5c] Add class to global registry for MIPS   */
+		/************************************************/
+		TypeClass.allClasses.add(classType);
+
 		/********************************************************/
-		/* [5c] Now process method bodies in class context      */
+		/* [5d] Now process method bodies in class context      */
 		/*     Members can only reference earlier-defined members */
 		/********************************************************/
 		SymbolTable.getInstance().beginScope();
@@ -443,12 +448,14 @@ public class AstDecClass extends AstNode{
 			{
 				// Override: Assign the original index/offset, and replace in vtable
 				method.offset = existingIndex * 4;
+				method.originClass = classType.name; // This is the implementation for this class
 				classType.vtable.set(existingIndex, method);
 			}
 			else
 			{
 				// New Method: Append at the end of the vtable
 				method.offset = classType.vtable.size() * 4;
+				method.originClass = classType.name; // Initial implementation
 				classType.vtable.add(method);
 			}
 		}

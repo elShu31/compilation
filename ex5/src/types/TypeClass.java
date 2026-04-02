@@ -26,6 +26,11 @@ public class TypeClass extends Type
 	/**************************************************/
 	public java.util.List<TypeFunction> vtable;
 	
+	/**************************************************/
+	/* A list of all classes defined in the program.  */
+	/**************************************************/
+	public static java.util.List<TypeClass> allClasses = new java.util.ArrayList<>();
+
 	/****************/
 	/* CTROR(S) ... */
 	/****************/
