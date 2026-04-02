@@ -19,6 +19,12 @@ public class TypeClass extends Type
 	/* reserved vtable pointer slot at offset 0       */
 	/**************************************************/
 	public int classSize = 0;
+
+	/**************************************************/
+	/* Flat representation of this class's vtable,    */
+	/* mirroring what will be written to .data        */
+	/**************************************************/
+	public java.util.List<TypeFunction> vtable;
 	
 	/****************/
 	/* CTROR(S) ... */

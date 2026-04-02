@@ -11,6 +11,12 @@ public class TypeFunction extends Type
 	/* types of input params */
 	/*************************/
 	public TypeList params;
+
+	/*************************************************/
+	/* Byte offset of this method within the class's */
+	/* virtual table layout. Computed during parsing */
+	/*************************************************/
+	public int offset = -1;
 	
 	/****************/
 	/* CTROR(S) ... */

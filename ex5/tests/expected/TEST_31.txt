@@ -1,0 +1,12 @@
+[VTABLE LAYOUT] Class: A
+[VTABLE LAYOUT] Offset: 0, Method: m1
+[VTABLE LAYOUT] Offset: 4, Method: m2
+[VTABLE LAYOUT] Class: B
+[VTABLE LAYOUT] Offset: 0, Method: m1
+[VTABLE LAYOUT] Offset: 4, Method: m2
+[VTABLE LAYOUT] Offset: 8, Method: m3
+[VTABLE LAYOUT] Class: C
+[VTABLE LAYOUT] Offset: 0, Method: m1
+[VTABLE LAYOUT] Offset: 4, Method: m2
+[VTABLE LAYOUT] Offset: 8, Method: m3
+[VTABLE LAYOUT] Offset: 12, Method: m4

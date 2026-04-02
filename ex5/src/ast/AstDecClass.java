@@ -202,8 +202,13 @@ public class AstDecClass extends AstNode{
 		/************************************************/
 		computeFieldOffsets(classType);
 
+		/************************************************/
+		/* [5b] Compute method offsets and vtable       */
+		/************************************************/
+		computeMethodOffsets(classType);
+
 		/********************************************************/
-		/* [5b] Now process method bodies in class context     */
+		/* [5c] Now process method bodies in class context      */
 		/*     Members can only reference earlier-defined members */
 		/********************************************************/
 		SymbolTable.getInstance().beginScope();
@@ -391,5 +396,68 @@ public class AstDecClass extends AstNode{
 			}
 		}
 		return count + countInheritedFields(parentClass.father);
+	}
+
+	/******************************************************************/
+	/* Helper: Compute the VTable layout and method offsets           */
+	/******************************************************************/
+	private void computeMethodOffsets(TypeClass classType)
+	{
+		classType.vtable = new java.util.ArrayList<>();
+		
+		// 1. Copy parent's vtable to inherit existing layouts
+		if (classType.father != null && classType.father.vtable != null)
+		{
+			classType.vtable.addAll(classType.father.vtable);
+		}
+
+		// 2. Extract strictly methods from own dataMembers 
+		// (remember dataMembers is prepended, so it's reversed relative to declaration)
+		java.util.List<TypeFunction> ownMethods = new java.util.ArrayList<>();
+		for (TypeList it = classType.dataMembers; it != null; it = it.tail)
+		{
+			if (it.head instanceof TypeFunction)
+			{
+				ownMethods.add((TypeFunction) it.head);
+			}
+		}
+
+		// Restore declaration order
+		java.util.Collections.reverse(ownMethods);
+
+		// 3. Overlay own methods onto the vtable
+		for (TypeFunction method : ownMethods)
+		{
+			int existingIndex = -1;
+			// Find existing method with the exact same name (Overriding)
+			for (int i = 0; i < classType.vtable.size(); i++)
+			{
+				if (classType.vtable.get(i).name.equals(method.name))
+				{
+					existingIndex = i;
+					break;
+				}
+			}
+
+			if (existingIndex != -1)
+			{
+				// Override: Assign the original index/offset, and replace in vtable
+				method.offset = existingIndex * 4;
+				classType.vtable.set(existingIndex, method);
+			}
+			else
+			{
+				// New Method: Append at the end of the vtable
+				method.offset = classType.vtable.size() * 4;
+				classType.vtable.add(method);
+			}
+		}
+
+		// 4. Debug Print (Allows automated and visual testing without executing MIPS)
+		System.out.println("[VTABLE LAYOUT] Class: " + classType.name);
+		for (TypeFunction method : classType.vtable)
+		{
+			System.out.println("[VTABLE LAYOUT] Offset: " + method.offset + ", Method: " + method.name);
+		}
 	}
 }
