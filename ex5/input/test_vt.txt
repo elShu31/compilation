@@ -1,0 +1,25 @@
+class A {
+    int x;
+    int f() { return x; }
+    int g() { return 1; }
+}
+
+class B extends A {
+    int y;
+    int f() { return 67; }
+    int h() { return 1337; }
+}
+
+void main() {
+    A a;
+    B b;
+    a := new A;
+    b := new B;
+    a.f();
+    b.f();
+    a.x := 5;
+    b.x := 6;
+    PrintInt(a.f());
+    PrintInt(b.f());
+    PrintInt(b.h());
+}

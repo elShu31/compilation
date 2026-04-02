@@ -197,8 +197,13 @@ public class AstDecClass extends AstNode{
 		/************************************************/
 		classType.dataMembers = classMembers;
 
+		/************************************************/
+		/* [5a] Compute field offsets and class size    */
+		/************************************************/
+		computeFieldOffsets(classType);
+
 		/********************************************************/
-		/* [5] Now process method bodies in class context      */
+		/* [5b] Now process method bodies in class context     */
 		/*     Members can only reference earlier-defined members */
 		/********************************************************/
 		SymbolTable.getInstance().beginScope();
@@ -326,5 +331,65 @@ public class AstDecClass extends AstNode{
 		{
 			SymbolTable.getInstance().enter(it.head.name, it.head);
 		}
+	}
+
+	/******************************************************************/
+	/* Helper: Compute byte offsets for fields in the class layout    */
+	/* Layout: [vtable_ptr (4 bytes)] [inherited fields] [own fields] */
+	/* Offset 0 is reserved for a future vtable pointer.             */
+	/******************************************************************/
+	private void computeFieldOffsets(TypeClass classType)
+	{
+		// Count inherited fields by walking parent chain
+		int inheritedFieldCount = countInheritedFields(classType.father);
+
+		// Base offset = 4 (vtable ptr) + inherited fields * 4
+		int currentOffset = 4 + inheritedFieldCount * 4;
+
+		// Assign offsets to own fields (dataMembers contains both fields and methods)
+		// dataMembers is built in reverse order (prepended), so we need to
+		// collect fields in declaration order first
+		java.util.List<TypeField> ownFields = new java.util.ArrayList<>();
+		for (TypeList it = classType.dataMembers; it != null; it = it.tail)
+		{
+			if (it.head instanceof TypeField)
+			{
+				ownFields.add((TypeField) it.head);
+			}
+		}
+
+		// Reverse to get declaration order (since list was built by prepending)
+		java.util.Collections.reverse(ownFields);
+
+		// Assign offsets
+		for (TypeField field : ownFields)
+		{
+			field.offset = currentOffset;
+			currentOffset += 4;
+		}
+
+		// Set total class size
+		classType.classSize = currentOffset;
+	}
+
+	/******************************************************************/
+	/* Helper: Count total number of fields in parent class chain    */
+	/******************************************************************/
+	private int countInheritedFields(TypeClass parentClass)
+	{
+		if (parentClass == null)
+		{
+			return 0;
+		}
+
+		int count = 0;
+		for (TypeList it = parentClass.dataMembers; it != null; it = it.tail)
+		{
+			if (it.head instanceof TypeField)
+			{
+				count++;
+			}
+		}
+		return count + countInheritedFields(parentClass.father);
 	}
 }

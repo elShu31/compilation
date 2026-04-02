@@ -1,11 +1,19 @@
 package ast;
 
 import types.*;
+import ir.*;
+import temp.*;
 
 public class AstVarField extends AstVar
 {
 	public AstVar var;
 	public String fieldName;
+
+	/*************************************************/
+	/* The field's byte offset captured during       */
+	/* semantic analysis for use in IR generation    */
+	/*************************************************/
+	public int fieldByteOffset = -1;
 	
 	/******************/
 	/* CONSTRUCTOR(S) */
@@ -107,9 +115,27 @@ public class AstVarField extends AstVar
 		// If it's a field, return the field type
 		if (member instanceof TypeField)
 		{
+			this.fieldByteOffset = ((TypeField) member).offset;
 			return ((TypeField) member).fieldType;
 		}
 		// If it's a method, return the function type
 		return member;
+	}
+
+	/********************************************************/
+	/* IR generation for field access                       */
+	/* Loads the field value into a fresh temp              */
+	/********************************************************/
+	@Override
+	public Temp irMe() {
+		// 1. Evaluate the object instance pointer
+		Temp objectBase = var.irMe();
+		// 2. Get free temp for destination
+		Temp dst = TempFactory.getInstance().getFreshTemp();
+
+		// 3. Output IR load field
+		Ir.getInstance().AddIrCommand(new IrCommandLoadField(dst, objectBase, fieldByteOffset));
+
+		return dst;
 	}
 }

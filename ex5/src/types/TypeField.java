@@ -10,6 +10,12 @@ public class TypeField extends Type
 	/* The type of the field           */
 	/***********************************/
 	public Type fieldType;
+
+	/***********************************************/
+	/* Byte offset of this field within the object */
+	/* layout. Set during class semantic analysis  */
+	/***********************************************/
+	public int offset = -1;
 	
 	/****************/
 	/* CTROR(S) ... */

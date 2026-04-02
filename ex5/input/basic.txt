@@ -1,6 +1,12 @@
 array IntArray = int[];
 int g;
 
+class A
+{
+    int a;
+    int tail;
+}
+
 void f(int c, int d){
 	int a := 5;
 	int b := 3;
@@ -20,6 +26,13 @@ void main(){
     string e := "abc";
     string h := "abc";
     string w := e + h;
+
+    A d := new A;
+    d.a := 5;
+    d.tail := 10;
+   
+    PrintInt(d.a);
+    PrintInt(d.tail);
 
     int a := 2;
     row[a] := 1337;

@@ -1,9 +1,17 @@
 package ast;
 
+import ir.*;
+import temp.*;
 import types.*;
 
 public class AstExpNil extends AstExp
 {
+	public Temp irMe()
+	{
+		Temp t = TempFactory.getInstance().getFreshTemp();
+		Ir.getInstance().AddIrCommand(new IRcommandConstInt(t, 0));
+		return t;
+	}
 	/******************/
 	/* CONSTRUCTOR(S) */
 	/******************/

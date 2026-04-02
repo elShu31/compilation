@@ -112,10 +112,16 @@ public class AstExpNew extends AstExp {
             Ir.getInstance().AddIrCommand(new IrCommandAllocateArray(dst, size));
             return dst;
         } else {
-            // Class allocation block
-            // (Assuming class allocation is ignored temporarily based on instructions,
-            // or simply returns null for now until object memory is defined)
-            return null;
+            // Class allocation: new Type
+            // 1. Look up the class type to get its size
+            TypeClass classType = (TypeClass) symboltable.SymbolTable.getInstance().find(type.typeName);
+            // 2. Get free temp for destination
+            Temp dst = TempFactory.getInstance().getFreshTemp();
+
+            // 3. Output IR new class
+            Ir.getInstance().AddIrCommand(new IrCommandAllocateClass(dst, classType.classSize, classType.name));
+
+            return dst;
         }
     }
 }

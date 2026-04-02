@@ -13,6 +13,12 @@ public class TypeClass extends Type
 	/* packed together with the class methods         */
 	/**************************************************/
 	public TypeList dataMembers;
+
+	/**************************************************/
+	/* Total object size in bytes, including the      */
+	/* reserved vtable pointer slot at offset 0       */
+	/**************************************************/
+	public int classSize = 0;
 	
 	/****************/
 	/* CTROR(S) ... */
