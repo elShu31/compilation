@@ -121,6 +121,21 @@ public class AstExpNew extends AstExp {
             // 3. Output IR new class
             Ir.getInstance().AddIrCommand(new IrCommandAllocateClass(dst, classType.classSize, classType.name));
 
+            // 4. Initialize class fields (including inherited fields)
+            TypeClass currentCls = classType;
+            while (currentCls != null) {
+                for (TypeList it = currentCls.dataMembers; it != null; it = it.tail) {
+                    if (it.head instanceof TypeField) {
+                        TypeField clsField = (TypeField) it.head;
+                        if (clsField.initialValue != null) {
+                            Temp val = clsField.initialValue.irMe();
+                            Ir.getInstance().AddIrCommand(new IrCommandStoreField(dst, clsField.offset, val));
+                        }
+                    }
+                }
+                currentCls = currentCls.father;
+            }
+
             return dst;
         }
     }

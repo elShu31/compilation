@@ -102,24 +102,32 @@ public class AstStmtAssign extends AstStmt {
 	}
 
 	public Temp irMe() {
-		Temp src = exp.irMe();
-
+		// Evaluate left-hand side components before evaluating the right-hand side
+		// This strictly enforces left-to-right evaluation order and prevents
+		// RHS side-effects from modifying LHS variable resolutions incorrectly.
+		
 		if (var instanceof AstVarSimple) {
 			AstVarSimple simpleVar = (AstVarSimple) var;
 			if (simpleVar.isField) {
 				// Implicit field assignment - store to 'this'
 				Temp thisPtr = TempFactory.getInstance().getFreshTemp();
 				Ir.getInstance().AddIrCommand(new IrCommandLoad(thisPtr, "this", -1, false, 8));
+				
+				Temp src = exp.irMe(); // Evaluate RHS
+				
 				Ir.getInstance().AddIrCommand(new IrCommandStoreField(thisPtr, simpleVar.fieldByteOffset, src));
 			} else {
 				/****************************************/
-				/* Get the scope offset for this var */
-				/* from the symbol table */
+				/* Get the scope offset for this var    */
+				/* from the symbol table                */
 				/****************************************/
 				String varName = simpleVar.name;
 				int scopeOffset = simpleVar.getScopeOffset();
 				boolean isGlobal = simpleVar.isGlobal;
 				int fpOffset = simpleVar.fpOffset;
+				
+				Temp src = exp.irMe(); // Evaluate RHS
+				
 				Ir.getInstance().AddIrCommand(new IrCommandStore(varName, scopeOffset, isGlobal, fpOffset, src));
 			}
 		} else if (var instanceof AstVarSubscript) {
@@ -127,10 +135,15 @@ public class AstStmtAssign extends AstStmt {
 			Temp arrayBase = subVar.var.irMe();
 			Temp index = subVar.subscript.irMe();
 
+			Temp src = exp.irMe(); // Evaluate RHS AFTER indexing array
+
 			Ir.getInstance().AddIrCommand(new IrCommandStoreArray(arrayBase, index, src));
 		} else if (var instanceof AstVarField) {
 			AstVarField fieldVar = (AstVarField) var;
 			Temp objectBase = fieldVar.var.irMe();
+			
+			Temp src = exp.irMe(); // Evaluate RHS AFTER loading object base pointer
+
 			Ir.getInstance().AddIrCommand(new IrCommandStoreField(objectBase, fieldVar.fieldByteOffset, src));
 		}
 

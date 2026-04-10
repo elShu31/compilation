@@ -17,6 +17,11 @@ public class TypeField extends Type
 	/***********************************************/
 	public int offset = -1;
 	
+	/***********************************************/
+	/* AST Expression bound to initial value     */
+	/***********************************************/
+	public ast.AstExp initialValue = null;
+	
 	/****************/
 	/* CTROR(S) ... */
 	/****************/

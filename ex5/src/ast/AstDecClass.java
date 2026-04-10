@@ -125,7 +125,18 @@ public class AstDecClass extends AstNode{
 					throw new SemanticException("field cannot have void type", fieldVar.lineNumber);
 				}
 
-				classMembers = new TypeList(new TypeField(fieldType, fieldVar.id), classMembers);
+				TypeField newField = new TypeField(fieldType, fieldVar.id);
+				
+				// Apply optional assignments
+				if (fieldVar.exp != null) {
+				    Type expType = fieldVar.exp.semantMe();
+				    if (!TypeUtils.canAssignType(fieldType, expType)) {
+				        throw new SemanticException("type mismatch in initial value assignment for " + fieldVar.id, fieldVar.lineNumber);
+				    }
+				    newField.initialValue = fieldVar.exp;
+				}
+
+				classMembers = new TypeList(newField, classMembers);
 			}
 			else if (it.head.decFunc != null)
 			{

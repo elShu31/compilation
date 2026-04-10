@@ -112,29 +112,38 @@ public class AstStmtAssignNew extends AstStmt {
 
 	public Temp irMe() {
 		if (newExp != null) {
-			Temp src = newExp.irMe();
+			// Evaluate left-hand side components before evaluating the right-hand side
+			// This maintains strict left-to-right evaluation order
 			if (var instanceof AstVarSimple) {
 				AstVarSimple simpleVar = (AstVarSimple) var;
 				if (simpleVar.isField) {
 					// Implicit field assignment - store to 'this'
 					Temp thisPtr = TempFactory.getInstance().getFreshTemp();
 					Ir.getInstance().AddIrCommand(new IrCommandLoad(thisPtr, "this", -1, false, 8));
+					
+					Temp src = newExp.irMe(); // Evaluate RHS
 					Ir.getInstance().AddIrCommand(new IrCommandStoreField(thisPtr, simpleVar.fieldByteOffset, src));
 				} else {
 					String varName = simpleVar.name;
 					int scopeOffset = simpleVar.getScopeOffset();
 					boolean isGlobal = simpleVar.isGlobal;
 					int fpOffset = simpleVar.fpOffset;
+					
+					Temp src = newExp.irMe(); // Evaluate RHS
 					Ir.getInstance().AddIrCommand(new IrCommandStore(varName, scopeOffset, isGlobal, fpOffset, src));
 				}
 			} else if (var instanceof AstVarSubscript) {
 				AstVarSubscript subVar = (AstVarSubscript) var;
 				Temp arrayBase = subVar.var.irMe();
 				Temp index = subVar.subscript.irMe();
+				
+				Temp src = newExp.irMe(); // Evaluate RHS AFTER indexing array
 				Ir.getInstance().AddIrCommand(new IrCommandStoreArray(arrayBase, index, src));
 			} else if (var instanceof AstVarField) {
 				AstVarField fieldVar = (AstVarField) var;
 				Temp objectBase = fieldVar.var.irMe();
+				
+				Temp src = newExp.irMe(); // Evaluate RHS AFTER loading object base pointer
 				Ir.getInstance().AddIrCommand(new IrCommandStoreField(objectBase, fieldVar.fieldByteOffset, src));
 			}
 		}
