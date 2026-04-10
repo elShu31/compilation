@@ -11,6 +11,12 @@ public class AstExpCall extends AstExp {
 	public String funcName;
 	public AstExpList params;
 
+	/*************************************************/
+	/* VTable offset for virtual method dispatch.    */
+	/* Set during semantMe() for method calls only.  */
+	/*************************************************/
+	public int methodVtableOffset = -1;
+
 	/******************/
 	/* CONSTRUCTOR(S) */
 	/******************/
@@ -96,6 +102,7 @@ public class AstExpCall extends AstExp {
 			}
 
 			func = (TypeFunction) funcType;
+			this.methodVtableOffset = func.offset;
 		}
 		/************************************************/
 		/* [2] Handle function call: funcName(params) */
@@ -191,9 +198,16 @@ public class AstExpCall extends AstExp {
 			Ir.getInstance().AddIrCommand(new IrCommandPushArg(argsValues.get(i)));
 		}
 
-		// 4. Do the call using jal
+		// 4. Do the call
 		Temp retVal = TempFactory.getInstance().getFreshTemp();
-		Ir.getInstance().AddIrCommand(new IrCommandCall(funcName, argsValues.size(), retVal));
+		if (var != null) {
+			// Virtual dispatch through vtable
+			Ir.getInstance().AddIrCommand(
+				new IrCommandVirtualCall(argsValues.get(0), methodVtableOffset, argsValues.size(), retVal));
+		} else {
+			// Static dispatch using jal
+			Ir.getInstance().AddIrCommand(new IrCommandCall(funcName, argsValues.size(), retVal));
+		}
 
 		return retVal;
 	}

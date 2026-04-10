@@ -547,6 +547,31 @@ public class MipsGenerator {
 		}
 	}
 
+	public void virtualCallFunc(Temp thisPtr, int vtableOffset, int numArgs, Temp retVal) {
+		String rThis = regalloc.RegisterAllocator.getReg(thisPtr);
+
+		fileWriter.format("\t# Virtual call via vtable offset %d\n", vtableOffset);
+
+		// 1. Load vtable pointer from offset 0 of the object
+		fileWriter.format("\tlw $s0,0(%s)\n", rThis);
+
+		// 2. Load method address from vtable at the given offset
+		fileWriter.format("\tlw $s1,%d($s0)\n", vtableOffset);
+
+		// 3. Jump and link to the method
+		fileWriter.format("\tjalr $s1\n");
+
+		// 4. Clean up arguments from the stack
+		if (numArgs > 0) {
+			fileWriter.format("\taddu $sp,$sp,%d\n", numArgs * WORD_SIZE);
+		}
+
+		// 5. Move return value
+		if (retVal != null) {
+			fileWriter.format("\tmove %s,$v0\n", regalloc.RegisterAllocator.getReg(retVal));
+		}
+	}
+
 	public void emitStrings(java.util.List<String> strings) {
 		if (strings.isEmpty()) {
 			return;
