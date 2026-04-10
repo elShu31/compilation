@@ -21,7 +21,7 @@ public class MipsGenerator {
 
 	public void finalizeFile() {
 		/*******************************/
-		/* [2] Close file writer       */
+		/* [2] Close file writer */
 		/*******************************/
 		fileWriter.close();
 	}
@@ -254,7 +254,7 @@ public class MipsGenerator {
 		fileWriter.format("\tli $a0,%d\n", size);
 		fileWriter.format("\tli $v0,9\n");
 		fileWriter.format("\tsyscall\n");
-		
+
 		// Initialize vtable pointer at offset 0
 		fileWriter.format("\tla $a0,vt_%s\n", className);
 		fileWriter.format("\tsw $a0,0($v0)\n");
@@ -552,6 +552,11 @@ public class MipsGenerator {
 
 		fileWriter.format("\t# Virtual call via vtable offset %d\n", vtableOffset);
 
+		// 0. Check null dereference
+		String lNotNull = ir.IrCommand.getFreshLabel("notNull");
+		fileWriter.format("\tbeq %s,$zero,error_invalid_ptr_dref\n", rThis);
+		fileWriter.format("%s:\n", lNotNull);
+
 		// 1. Load vtable pointer from offset 0 of the object
 		fileWriter.format("\tlw $s0,0(%s)\n", rThis);
 
@@ -619,7 +624,7 @@ public class MipsGenerator {
 		this.fileWriter.print("string_invalid_ptr_dref: .asciiz \"Invalid Pointer Dereference\"\n");
 
 		/*****************************************************/
-		/* [3.5] Emit VTables into .data                      */
+		/* [3.5] Emit VTables into .data */
 		/*****************************************************/
 		if (!types.TypeClass.allClasses.isEmpty()) {
 			for (types.TypeClass tc : types.TypeClass.allClasses) {
