@@ -197,6 +197,11 @@ public class AstExpCall extends AstExp {
 			argsValues.add(thisPtr);
 		}
 
+		// Insert dummy argument to shift local parameters by 4 bytes
+		Temp dummy = TempFactory.getInstance().getFreshTemp();
+		Ir.getInstance().AddIrCommand(new IRcommandConstInt(dummy, 0));
+		argsValues.add(dummy);
+
 		// 2. Evaluate all parameters left-to-right
 		AstExpList curr = params;
 		while (curr != null) {

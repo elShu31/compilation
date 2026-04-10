@@ -99,7 +99,7 @@ public class AstDecFunc extends AstNode {
 		/*******************************************************/
 		SymbolTable.getInstance().setCurrentFunctionName(funcName);
 
-		int paramOffset = 8;
+		int paramOffset = isMethod ? 16 : 12;
 		// Enter parameters into symbol table
 		for (AstParametersList it = params; it != null; it = it.tail) {
 			// Check for reserved keyword in parameter name

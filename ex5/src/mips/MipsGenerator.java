@@ -316,6 +316,9 @@ public class MipsGenerator {
 
 	public void loadArray(Temp dst, Temp arrayBase, Temp index) {
 		fileWriter.format("\t# Load Array\n");
+
+		// Before all - make sure the array is not null
+		fileWriter.format("\tbeqz %s,error_invalid_ptr_dref\n", regalloc.RegisterAllocator.getReg(arrayBase));
 		checkArrayBounds(arrayBase, index);
 
 		// 1. Add 1 to index to skip length metadata
@@ -332,6 +335,9 @@ public class MipsGenerator {
 
 	public void storeArray(Temp arrayBase, Temp index, Temp src) {
 		fileWriter.format("\t# Store Array\n");
+
+		// Before all - make sure the array is not null
+		fileWriter.format("\tbeqz %s,error_invalid_ptr_dref\n", regalloc.RegisterAllocator.getReg(arrayBase));
 		checkArrayBounds(arrayBase, index);
 
 		// 1. Add 1 to index to skip length metadata
