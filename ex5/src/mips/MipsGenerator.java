@@ -494,15 +494,15 @@ public class MipsGenerator {
 
 		fileWriter.format("\tmove $fp,$sp\n");
 
+		if (localVarsSize > 0) {
+			fileWriter.format("\tsubu $sp,$sp,%d\n", localVarsSize);
+		}
+
 		// RegisterAllocator assigns $t0-$t9. So we preserve any active $t register.
 		fileWriter.format("\t# Preserve caller registers\n");
 		fileWriter.format("\tsubu $sp,$sp,%d\n", RegisterAllocator.K * WORD_SIZE);
 		for (int i = 0; i < RegisterAllocator.K; i++) {
 			fileWriter.format("\tsw $t%d,%d($sp)\n", i, i * WORD_SIZE);
-		}
-
-		if (localVarsSize > 0) {
-			fileWriter.format("\tsubu $sp,$sp,%d\n", localVarsSize);
 		}
 	}
 
