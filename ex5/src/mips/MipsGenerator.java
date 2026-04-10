@@ -377,7 +377,6 @@ public class MipsGenerator {
 	/**************************/
 	public void li(Temp t, int value) {
 		fileWriter.format("\tli %s,%d\n", regalloc.RegisterAllocator.getReg(t), value);
-		clampInt(t);
 	}
 
 	private void clampInt(Temp dst) {
