@@ -40,7 +40,16 @@ public class Main {
 			/***********************************/
 			/* [5] 3 ... 2 ... 1 ... Parse !!! */
 			/***********************************/
-			ast = (AstDecList) p.parse().value;
+			try {
+				ast = (AstDecList) p.parse().value;
+			}
+
+			catch (java.lang.Error e) {
+				// This only catches lexical errors
+				fileWriter.write("ERROR");
+				fileWriter.close();
+				throw (e);
+			}
 
 			/*************************/
 			/* [6] Print the AST ... */
@@ -50,7 +59,13 @@ public class Main {
 			/**************************/
 			/* [7] Semant the AST ... */
 			/**************************/
-			ast.semantMe();
+			try {
+				ast.semantMe();
+			} catch (SemanticException e) {
+				fileWriter.print("ERROR(" + e.getLineNumber() + ")");
+				fileWriter.close();
+				throw (e);
+			}
 
 			/**********************/
 			/* [8] Ir the AST ... */
