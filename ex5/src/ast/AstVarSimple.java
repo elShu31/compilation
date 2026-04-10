@@ -23,6 +23,12 @@ public class AstVarSimple extends AstVar {
 	/*************************************************/
 	private int scopeOffset = -1;
 
+	/*************************************************/
+	/* Properties for handling implicit class fields */
+	/*************************************************/
+	public boolean isField = false;
+	public int fieldByteOffset = -1;
+
 	/******************/
 	/* CONSTRUCTOR(S) */
 	/******************/
@@ -91,6 +97,8 @@ public class AstVarSimple extends AstVar {
 
 		// If it's a field, return the field's type, not the TypeField wrapper
 		if (t instanceof TypeField) {
+			this.isField = true;
+			this.fieldByteOffset = ((TypeField) t).offset;
 			return ((TypeField) t).fieldType;
 		}
 
@@ -103,6 +111,15 @@ public class AstVarSimple extends AstVar {
 	/********************************************************/
 	public Temp irMe() {
 		Temp dst = TempFactory.getInstance().getFreshTemp();
+
+		if (isField) {
+			// It's an implicit class field! Load from 'this' pointer -> always at 8($fp) in methods
+			Temp thisPtr = TempFactory.getInstance().getFreshTemp();
+			Ir.getInstance().AddIrCommand(new IrCommandLoad(thisPtr, "this", -1, false, 8));
+			Ir.getInstance().AddIrCommand(new IrCommandLoadField(dst, thisPtr, fieldByteOffset));
+			return dst;
+		}
+
 		/****************************************/
 		/* Use the captured scope offset */
 		/****************************************/

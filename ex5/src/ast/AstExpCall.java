@@ -16,6 +16,7 @@ public class AstExpCall extends AstExp {
 	/* Set during semantMe() for method calls only.  */
 	/*************************************************/
 	public int methodVtableOffset = -1;
+	public boolean isImplicitMethod = false;
 
 	/******************/
 	/* CONSTRUCTOR(S) */
@@ -120,6 +121,12 @@ public class AstExpCall extends AstExp {
 			}
 
 			func = (TypeFunction) funcType;
+
+			// Check if this is actually an implicit method call
+			if (func.originClass != null) {
+				this.isImplicitMethod = true;
+				this.methodVtableOffset = func.offset;
+			}
 		}
 
 		/************************************************/
@@ -179,9 +186,14 @@ public class AstExpCall extends AstExp {
 		// Standard function and method calls
 		ArrayList<Temp> argsValues = new ArrayList<>();
 
-		// 1. Evaluate "this" pointer first if it's a method call
+		// 1. Evaluate "this" pointer first if it's an explicit method call
 		if (var != null) {
 			Temp thisPtr = var.irMe();
+			argsValues.add(thisPtr);
+		} else if (isImplicitMethod) {
+			// Implicit method call - load 'this' from 8($fp)
+			Temp thisPtr = TempFactory.getInstance().getFreshTemp();
+			Ir.getInstance().AddIrCommand(new IrCommandLoad(thisPtr, "this", -1, false, 8));
 			argsValues.add(thisPtr);
 		}
 
@@ -200,7 +212,7 @@ public class AstExpCall extends AstExp {
 
 		// 4. Do the call
 		Temp retVal = TempFactory.getInstance().getFreshTemp();
-		if (var != null) {
+		if (var != null || isImplicitMethod) {
 			// Virtual dispatch through vtable
 			Ir.getInstance().AddIrCommand(
 				new IrCommandVirtualCall(argsValues.get(0), methodVtableOffset, argsValues.size(), retVal));

@@ -105,15 +105,23 @@ public class AstStmtAssign extends AstStmt {
 		Temp src = exp.irMe();
 
 		if (var instanceof AstVarSimple) {
-			/****************************************/
-			/* Get the scope offset for this var */
-			/* from the symbol table */
-			/****************************************/
-			String varName = ((AstVarSimple) var).name;
-			int scopeOffset = ((AstVarSimple) var).getScopeOffset();
-			boolean isGlobal = ((AstVarSimple) var).isGlobal;
-			int fpOffset = ((AstVarSimple) var).fpOffset;
-			Ir.getInstance().AddIrCommand(new IrCommandStore(varName, scopeOffset, isGlobal, fpOffset, src));
+			AstVarSimple simpleVar = (AstVarSimple) var;
+			if (simpleVar.isField) {
+				// Implicit field assignment - store to 'this'
+				Temp thisPtr = TempFactory.getInstance().getFreshTemp();
+				Ir.getInstance().AddIrCommand(new IrCommandLoad(thisPtr, "this", -1, false, 8));
+				Ir.getInstance().AddIrCommand(new IrCommandStoreField(thisPtr, simpleVar.fieldByteOffset, src));
+			} else {
+				/****************************************/
+				/* Get the scope offset for this var */
+				/* from the symbol table */
+				/****************************************/
+				String varName = simpleVar.name;
+				int scopeOffset = simpleVar.getScopeOffset();
+				boolean isGlobal = simpleVar.isGlobal;
+				int fpOffset = simpleVar.fpOffset;
+				Ir.getInstance().AddIrCommand(new IrCommandStore(varName, scopeOffset, isGlobal, fpOffset, src));
+			}
 		} else if (var instanceof AstVarSubscript) {
 			AstVarSubscript subVar = (AstVarSubscript) var;
 			Temp arrayBase = subVar.var.irMe();

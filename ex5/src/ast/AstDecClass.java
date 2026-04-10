@@ -233,8 +233,8 @@ public class AstDecClass extends AstNode{
 			{
 				// Field - add to scope (type already validated above)
 				AstDecVar fieldVar = it.head.decVar;
-				Type fieldType = SymbolTable.getInstance().find(fieldVar.type.typeName);
-				SymbolTable.getInstance().enter(fieldVar.id, new TypeField(fieldType, fieldVar.id));
+				Type member = TypeUtils.findMemberInClassHierarchy(classType, fieldVar.id);
+				SymbolTable.getInstance().enter(fieldVar.id, member);
 			}
 			else if (it.head.decFunc != null)
 			{
@@ -243,9 +243,8 @@ public class AstDecClass extends AstNode{
 				method.semantMe(true);
 
 				// Add method to scope after processing (for later methods to reference)
-				Type retType = SymbolTable.getInstance().find(method.returnType.typeName);
-				TypeList paramTypes = TypeUtils.buildParameterTypeList(method.params, lineNumber);
-				SymbolTable.getInstance().enter(method.funcName, new TypeFunction(retType, method.funcName, paramTypes));
+				Type member = TypeUtils.findMemberInClassHierarchy(classType, method.funcName);
+				SymbolTable.getInstance().enter(method.funcName, member);
 			}
 		}
 
@@ -254,6 +253,31 @@ public class AstDecClass extends AstNode{
 		/*********************************************************/
 		/* [6] Return value is irrelevant for class declarations */
 		/*********************************************************/
+		return null;
+	}
+
+	/*********************************************************/
+	/* IR generation for class declarations                  */
+	/* Emits IR for all methods in the class                 */
+	/*********************************************************/
+	public temp.Temp irMe()
+	{
+		for (AstFieldList it = fields; it != null; it = it.tail)
+		{
+			if (it.head.decFunc != null)
+			{
+				AstDecFunc method = it.head.decFunc;
+				// Temporarily prefix the function name with the class name
+				// so that IrCommandLabel, Prologue, and Epilogue generate CorrectName
+				String originalName = method.funcName;
+				method.funcName = this.id + "_" + originalName;
+				
+				method.irMe();
+				
+				// Restore the original name 
+				method.funcName = originalName;
+			}
+		}
 		return null;
 	}
 
