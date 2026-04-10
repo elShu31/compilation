@@ -18,74 +18,73 @@ mkdir -p "$OUTPUT_DIR"
 
 # Build the compiler first
 echo "Building compiler..."
-make all > /dev/null 2>&1
+make > /dev/null 2>&1
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}Failed to build compiler!${NC}"
     exit 1
 fi
 
-# List of tests to run
-TESTS=("TEST_27" "TEST_28" "TEST_29" "TEST_30")
-
-echo "Running field access tests..."
+echo "Running tests..."
 echo "--------------------------------"
 
-for T in "${TESTS[@]}"; do
-    echo -n "Running $T... "
+# Run ALL .txt files in INPUT_DIR
+for IN_FILE in "$INPUT_DIR"/*.txt; do
+    FILENAME=$(basename "$IN_FILE")
+    # Determine the test ID (e.g., TEST_01 from TEST_01_Print_Primes.txt)
+    # Match the pattern TEST_XX
+    TEST_ID=$(echo "$FILENAME" | grep -oE "TEST_[0-9]+")
     
+    if [ -z "$TEST_ID" ]; then
+        TEST_ID="${FILENAME%.txt}"
+    fi
+
+    echo "Running $FILENAME..."
+
     # 1. Run compiler
-    # Find the full filename in input directory
-    IN_FILE=$(ls "$INPUT_DIR"/${T}_*.txt 2>/dev/null | head -n 1)
-    if [ -z "$IN_FILE" ]; then
-        echo -e "${RED}Input file not found!${NC}"
-        continue
-    fi
-    
-    java -jar "$COMPILER" "$IN_FILE" "$MIPS_OUT" > /dev/null 2>&1
-    
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}Compilation failed!${NC}"
-        continue
-    fi
-    
-    # 2. Run SPIM
-    # We filter out the 'Loaded:' line which varies by environment
-    spim -f "$MIPS_OUT" 2>&1 | grep -v "Loaded:" > "$TEMP_OUT"
-    
-    # 3. Compare with expected
-    EXPECTED_FILE="$EXPECTED_DIR/$T.txt"
-    
-    # Check if expected file exists
-    if [ ! -f "$EXPECTED_FILE" ]; then
-        echo -e "${RED}Expected output file missing!${NC}"
-        continue
-    fi
-    
-    # Diff ignoring whitespace changes
-    diff -b "$TEMP_OUT" "$EXPECTED_FILE" > /dev/null
-    
-    if [ $? -eq 0 ]; then
-        echo -e "${GREEN}PASSED${NC}"
+    if [[ "$FILENAME" == *"TEST_31"* ]]; then
+        # Special case for TEST_31 (VTable check)
+        echo "  [Compiler] java -jar $COMPILER $IN_FILE $MIPS_OUT"
+        java -jar "$COMPILER" "$IN_FILE" "$MIPS_OUT" > "$TEMP_OUT" 2>&1
+        grep "VTABLE LAYOUT" "$TEMP_OUT" > "$OUTPUT_DIR/vtable_out.txt" 2>/dev/null
+        ACTUAL_COMPARE="$OUTPUT_DIR/vtable_out.txt"
+        EXPECTED_FILE="$EXPECTED_DIR/TEST_31.txt"
     else
-        echo -e "${RED}FAILED${NC}"
-        echo "Differences:"
-        diff -u "$EXPECTED_FILE" "$TEMP_OUT"
+        echo "  [Compiler] java -jar $COMPILER $IN_FILE $MIPS_OUT"
+        java -jar "$COMPILER" "$IN_FILE" "$MIPS_OUT" > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+            echo -e "  ${RED}Compilation failed!${NC}"
+            continue
+        fi
+        
+        # 2. Run SPIM
+        # We filter out the 'Loaded:' line which varies by environment
+        echo "  [SPIM] spim -f $MIPS_OUT"
+        spim -f "$MIPS_OUT" 2>&1 | grep -v "Loaded:" | tee "$TEMP_OUT" | sed 's/^/    /'
+        ACTUAL_COMPARE="$TEMP_OUT"
+        
+        # Look for expected file: exact name or ID based name
+        EXPECTED_FILE="$EXPECTED_DIR/$FILENAME"
+        if [ ! -f "$EXPECTED_FILE" ]; then
+            EXPECTED_FILE="$EXPECTED_DIR/$TEST_ID.txt"
+        fi
+    fi
+
+    # 3. Compare with expected if it exists
+    if [ -f "$EXPECTED_FILE" ]; then
+        # Diff ignoring whitespace changes
+        diff -b "$ACTUAL_COMPARE" "$EXPECTED_FILE" > /dev/null
+        if [ $? -eq 0 ]; then
+            echo -e "  Result: ${GREEN}PASSED${NC}"
+        else
+            echo -e "  Result: ${RED}FAILED${NC}"
+            echo "  Differences:"
+            diff -u "$EXPECTED_FILE" "$ACTUAL_COMPARE" | sed 's/^/    /'
+        fi
+    else
+        echo -e "  Result: ${GREEN}EXECUTED (No expected file)${NC}"
     fi
 done
-
-echo "--------------------------------"
-echo -n "Running TEST_31 VTable check... "
-java -jar "$COMPILER" "$INPUT_DIR/TEST_31_MethodOffsets.txt" "$MIPS_OUT" > "$TEMP_OUT" 2>&1
-grep "VTABLE LAYOUT" "$TEMP_OUT" > "$OUTPUT_DIR/vtable_out.txt"
-diff -b "$OUTPUT_DIR/vtable_out.txt" "$EXPECTED_DIR/TEST_31.txt" > /dev/null
-if [ $? -eq 0 ]; then
-    echo -e "${GREEN}PASSED${NC}"
-else
-    echo -e "${RED}FAILED${NC}"
-    echo "Differences:"
-    diff -u "$EXPECTED_DIR/TEST_31.txt" "$OUTPUT_DIR/vtable_out.txt"
-fi
 
 echo "--------------------------------"
 echo "Tests complete."
