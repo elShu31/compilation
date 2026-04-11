@@ -1,0 +1,17 @@
+int myAdd(int a, int b, int c, int d)
+{
+    return a + b + c + d;
+}
+
+int myMul(int a, int b)
+{
+    return a * b;
+}
+
+void main()
+{
+    int r := myAdd(myMul(2, 3), myMul(4, 5), myMul(6, 7), myMul(8, 9));
+    PrintInt(r);
+    int s := myAdd(myAdd(1, 2, 3, 4), myAdd(5, 6, 7, 8), myAdd(9, 10, 11, 12), myAdd(13, 14, 15, 16));
+    PrintInt(s);
+}

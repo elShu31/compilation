@@ -1,0 +1,12 @@
+int myInc(int x) { return x + 1; }
+int dbl(int x) { return x * 2; }
+int myAdd(int a, int b) { return a + b; }
+
+void main()
+{
+    PrintInt(myAdd(myInc(5), dbl(3)));
+    PrintInt(myInc(myInc(myInc(0))));
+    PrintInt(dbl(dbl(dbl(1))));
+    PrintInt(myAdd(dbl(myInc(2)), myInc(dbl(3))));
+    PrintInt(myAdd(myAdd(1, 2), myAdd(3, 4)));
+}
