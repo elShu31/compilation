@@ -140,7 +140,6 @@ public class AstStmtIfElse extends AstStmt {
 		return null;
 	}
 
-	@Override
 	public int countLocalVars() {
 		int count = 0;
 		if (ifBody != null) {
@@ -150,5 +149,12 @@ public class AstStmtIfElse extends AstStmt {
 			count += elseBody.countLocalVars();
 		}
 		return count;
+	}
+
+	@Override
+	public boolean hasReturnStatement() {
+		boolean ifRet = (ifBody != null) && ifBody.hasReturnStatement();
+		boolean elseRet = (elseBody != null) && elseBody.hasReturnStatement();
+		return ifRet || elseRet;
 	}
 }

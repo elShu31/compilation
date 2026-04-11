@@ -93,11 +93,15 @@ public class AstStmtWhile extends AstStmt {
 		return null;
 	}
 
-	@Override
 	public int countLocalVars() {
 		if (body != null) {
 			return body.countLocalVars();
 		}
 		return 0;
+	}
+
+	@Override
+	public boolean hasReturnStatement() {
+		return body != null && body.hasReturnStatement();
 	}
 }

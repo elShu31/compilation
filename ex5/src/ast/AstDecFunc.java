@@ -20,16 +20,21 @@ public class AstDecFunc extends AstNode {
 		this.lineNumber = lineNumber;
 	}
 
-	@Override
 	public void printMe() {
 		System.out.format("AST DEC FUNC NODE: %s\n", funcName);
 		System.out.format("Local vars count: %d\n", countLocalVars());
+		if (body != null && body.hasReturnStatement()) {
+			System.out.format("method %s does have a return command\n", funcName);
+		} else {
+			System.out.format("method %s does not have a return command\n", funcName);
+		}
 		if (returnType != null)
 			returnType.printMe();
 		if (params != null)
 			params.printMe();
 		if (body != null)
 			body.printMe();
+
 	}
 
 	public Type semantMe() throws SemanticException {
@@ -154,6 +159,12 @@ public class AstDecFunc extends AstNode {
 
 		if (body != null)
 			body.irMe();
+
+		if (returnType != null && !returnType.typeName.equals("void")) {
+			Temp zeroTmp = TempFactory.getInstance().getFreshTemp();
+			Ir.getInstance().AddIrCommand(new IRcommandConstInt(zeroTmp, 0));
+			Ir.getInstance().AddIrCommand(new IrCommandReturn(funcName, zeroTmp));
+		}
 
 		Ir.getInstance().AddIrCommand(new IrCommandEpilogue(funcName));
 

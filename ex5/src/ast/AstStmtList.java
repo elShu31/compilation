@@ -79,7 +79,6 @@ public class AstStmtList extends AstNode {
 		return null;
 	}
 
-	@Override
 	public int countLocalVars() {
 		int count = 0;
 		if (head != null) {
@@ -89,5 +88,12 @@ public class AstStmtList extends AstNode {
 			count += tail.countLocalVars();
 		}
 		return count;
+	}
+
+	@Override
+	public boolean hasReturnStatement() {
+		boolean left = (head != null) && head.hasReturnStatement();
+		boolean right = (tail != null) && tail.hasReturnStatement();
+		return left || right;
 	}
 }

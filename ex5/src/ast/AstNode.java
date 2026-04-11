@@ -53,4 +53,11 @@ public abstract class AstNode {
 	public int countLocalVars() {
 		return 0;
 	}
+
+	/*********************************************************/
+	/* Checks if there is a return statement in the subtree. */
+	/*********************************************************/
+	public boolean hasReturnStatement() {
+		return false;
+	}
 }

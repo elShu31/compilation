@@ -85,4 +85,9 @@ public class AstStmtReturn extends AstStmt {
 		Ir.getInstance().AddIrCommand(new IrCommandReturn(funcName, retVal));
 		return null;
 	}
+
+	@Override
+	public boolean hasReturnStatement() {
+		return true;
+	}
 }
