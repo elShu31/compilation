@@ -44,11 +44,17 @@ public class Main {
 				ast = (AstDecList) p.parse().value;
 			}
 
+			catch (RuntimeException e) {
+				fileWriter.print("ERROR(" + l.getLine() + ")");
+				fileWriter.close();
+				return;
+			}
+
 			catch (java.lang.Error e) {
 				// This only catches lexical errors
 				fileWriter.write("ERROR");
 				fileWriter.close();
-				throw (e);
+				return;
 			}
 
 			/*************************/
@@ -64,7 +70,7 @@ public class Main {
 			} catch (SemanticException e) {
 				fileWriter.print("ERROR(" + e.getLineNumber() + ")");
 				fileWriter.close();
-				throw (e);
+				return;
 			}
 
 			/**********************/
