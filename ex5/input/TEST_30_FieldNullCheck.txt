@@ -1,0 +1,11 @@
+class Dummy
+{
+	int x;
+}
+
+void main()
+{
+	Dummy d := nil;
+	PrintString("Attempting");
+	d.x := 42;
+}
