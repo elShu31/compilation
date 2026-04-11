@@ -1,2 +1,6 @@
-Loaded: /opt/homebrew/Cellar/spim/9.1.24/share/exceptions.s
+SPIM Version 8.0 of January 8, 2010
+Copyright 1990-2010, James R. Larus.
+All Rights Reserved.
+See the file README for a full copyright notice.
+Loaded: /usr/lib/spim/exceptions.s
 -100 -100 200 -400 0 -32768 32767 32767 -32768 

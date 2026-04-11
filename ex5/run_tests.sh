@@ -19,7 +19,7 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="/Users/eranshufaro/IdeaProjects/compilation/ex5"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INPUT_DIR="${SCRIPT_DIR}/input"
 EXPECTED_DIR="${SCRIPT_DIR}/expected_output"
 ACTUAL_DIR="${SCRIPT_DIR}/output"
@@ -38,12 +38,12 @@ echo -e "${BOLD}${CYAN}=========================================================
 echo -e "${BOLD}${CYAN}  Building with make ...${RESET}"
 echo -e "${BOLD}${CYAN}============================================================${RESET}"
 
-# if make -C "${SCRIPT_DIR}" compile; then
-#     echo -e "${GREEN}Build succeeded.${RESET}\n"
-# else
-#     echo -e "${RED}Build FAILED. Aborting tests.${RESET}"
-#     exit 1
-# fi
+if make -C "${SCRIPT_DIR}"; then
+    echo -e "${GREEN}Build succeeded.${RESET}\n"
+else
+    echo -e "${RED}Build FAILED. Aborting tests.${RESET}"
+    exit 1
+fi
 
 mkdir -p "${ACTUAL_DIR}"
 
@@ -120,7 +120,8 @@ for input_file in "${INPUT_DIR}"/TEST_*.txt; do
 
     # ── Compare output ────────────────────────────────────────
     if diff -q -b "${expected_file}" "${actual_file}" > /dev/null 2>&1; then
-        echo "PASS"
+        echo -e "  ${GREEN}[PASS]${RESET}  ${test_basename}"
+        passed=$(( passed + 1 ))
     else
         echo -e "  ${RED}[FAIL]${RESET}  ${test_basename}"
         failed=$(( failed + 1 ))
