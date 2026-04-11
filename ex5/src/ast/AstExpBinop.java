@@ -206,12 +206,13 @@ public class AstExpBinop extends AstExp {
 	public Temp irMe() {
 		Temp t1 = null;
 		Temp t2 = null;
-		Temp dst = TempFactory.getInstance().getFreshTemp();
 
 		if (left != null)
 			t1 = left.irMe();
 		if (right != null)
 			t2 = right.irMe();
+
+		Temp dst = TempFactory.getInstance().getFreshTemp();
 
 		switch (op) {
 			case PLUS:

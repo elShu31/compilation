@@ -185,22 +185,16 @@ public class AstExpCall extends AstExp {
 
 		// Standard function and method calls
 		ArrayList<Temp> argsValues = new ArrayList<>();
+		Temp thisPtr = null;
 
 		// 1. Evaluate "this" pointer first if it's an explicit method call
 		if (var != null) {
-			Temp thisPtr = var.irMe();
-			argsValues.add(thisPtr);
+			thisPtr = var.irMe();
 		} else if (isImplicitMethod) {
 			// Implicit method call - load 'this' from 8($fp)
-			Temp thisPtr = TempFactory.getInstance().getFreshTemp();
+			thisPtr = TempFactory.getInstance().getFreshTemp();
 			Ir.getInstance().AddIrCommand(new IrCommandLoad(thisPtr, "this", -1, false, 8));
-			argsValues.add(thisPtr);
 		}
-
-		// Insert dummy argument to shift local parameters by 4 bytes
-		Temp dummy = TempFactory.getInstance().getFreshTemp();
-		Ir.getInstance().AddIrCommand(new IRcommandConstInt(dummy, 0));
-		argsValues.add(dummy);
 
 		// 2. Evaluate all parameters left-to-right
 		AstExpList curr = params;
@@ -210,20 +204,34 @@ public class AstExpCall extends AstExp {
 			curr = curr.tail;
 		}
 
-		// 3. Push arguments onto the stack in reverse order
+		// 3. Push actual arguments onto the stack in reverse order
 		for (int i = argsValues.size() - 1; i >= 0; i--) {
 			Ir.getInstance().AddIrCommand(new IrCommandPushArg(argsValues.get(i)));
 		}
 
-		// 4. Do the call
+		// 4. Push dummy argument (shifts local parameters by 4 bytes)
+		//    Created here to avoid keeping the temp live during arg evaluation
+		Temp dummy = TempFactory.getInstance().getFreshTemp();
+		Ir.getInstance().AddIrCommand(new IRcommandConstInt(dummy, 0));
+		Ir.getInstance().AddIrCommand(new IrCommandPushArg(dummy));
+
+		// 5. Push "this" pointer last if method call (goes on top of stack)
+		if (thisPtr != null) {
+			Ir.getInstance().AddIrCommand(new IrCommandPushArg(thisPtr));
+		}
+
+		// Total args pushed = argsValues.size() + 1 (dummy) + (thisPtr ? 1 : 0)
+		int totalArgs = argsValues.size() + 1 + (thisPtr != null ? 1 : 0);
+
+		// 6. Do the call
 		Temp retVal = TempFactory.getInstance().getFreshTemp();
 		if (var != null || isImplicitMethod) {
 			// Virtual dispatch through vtable
 			Ir.getInstance().AddIrCommand(
-				new IrCommandVirtualCall(argsValues.get(0), methodVtableOffset, argsValues.size(), retVal));
+				new IrCommandVirtualCall(thisPtr, methodVtableOffset, totalArgs, retVal));
 		} else {
 			// Static dispatch using jal
-			Ir.getInstance().AddIrCommand(new IrCommandCall(funcName, argsValues.size(), retVal));
+			Ir.getInstance().AddIrCommand(new IrCommandCall(funcName, totalArgs, retVal));
 		}
 
 		return retVal;
