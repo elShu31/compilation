@@ -424,15 +424,32 @@ public class MipsGenerator {
 
 	public void div(Temp dst, Temp oprnd1, Temp oprnd2) {
 		String labelValidDiv = IrCommand.getFreshLabel("ValidDiv");
+		String labelDivDone = IrCommand.getFreshLabel("DivDone");
 
-		fileWriter.format("\tbne %s,$zero,%s\n", regalloc.RegisterAllocator.getReg(oprnd2), labelValidDiv);
+		String rDst = regalloc.RegisterAllocator.getReg(dst);
+		String rOp1 = regalloc.RegisterAllocator.getReg(oprnd1);
+		String rOp2 = regalloc.RegisterAllocator.getReg(oprnd2);
+
+		fileWriter.format("\tbne %s,$zero,%s\n", rOp2, labelValidDiv);
 		// Branch not taken - there is a zero division error, jump to error handler
 		jump("error_illegal_div_by_0");
 
 		// Branch was taken - there is no zero division error
 		label(labelValidDiv);
-		fileWriter.format("\tdiv %s,%s,%s\n", regalloc.RegisterAllocator.getReg(dst),
-				regalloc.RegisterAllocator.getReg(oprnd1), regalloc.RegisterAllocator.getReg(oprnd2));
+		fileWriter.format("\tdiv %s,%s\n", rOp1, rOp2);
+		
+		// Floor division adjustment
+		fileWriter.format("\txor $v1,%s,%s\n", rOp1, rOp2); // Save sign comparison before clobbering registers
+		fileWriter.format("\tmflo %s\n", rDst);
+		
+		fileWriter.format("\tbgez $v1,%s\n", labelDivDone); // same sign -> no adjustment needed
+		
+		fileWriter.format("\tmfhi $v1\n");
+		fileWriter.format("\tbeq $v1,$zero,%s\n", labelDivDone); // exact integer division
+		
+		fileWriter.format("\taddi %s,%s,-1\n", rDst, rDst);
+		
+		label(labelDivDone);
 		clampInt(dst);
 	}
 

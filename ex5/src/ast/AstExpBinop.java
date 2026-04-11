@@ -196,7 +196,12 @@ public class AstExpBinop extends AstExp {
 			case TIMES:
 				return leftVal * rightVal;
 			case DIVIDE:
-				return (rightVal != 0) ? leftVal / rightVal : null;
+				if (rightVal == 0) return null;
+				int q = leftVal / rightVal;
+				if (leftVal % rightVal != 0 && ((leftVal < 0) ^ (rightVal < 0))) {
+					q--;
+				}
+				return q;
 			default:
 				return null;
 		}
