@@ -1,0 +1,2 @@
+Loaded: /opt/homebrew/Cellar/spim/9.1.24/share/exceptions.s
+alpha1 92 78 85 bravo2 100 65 84 charlie3 70 70 70 100 32767 255 

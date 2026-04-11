@@ -1,91 +1,150 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# ============================================================
+#  run_tests.sh  –  build & test the COMPILER
+#
+#  Usage:  bash run_tests.sh
+#
+#  Pipeline per test:
+#    1. java -jar COMPILER input.txt  →  output.asm
+#    2. spim -file output.asm         →  actual_output.txt
+#    3. diff actual_output.txt        vs  expected_output.txt
+#
+#  If the compiler exits non-zero (error-case tests), its
+#  stderr is used as the actual output instead.
+#
+#  Output:
+#    • Per-test [PASS] / [FAIL] printed to the terminal
+#    • diff_report.txt – full unified diff for every test
+# ============================================================
 
-# Configuration
-COMPILER="COMPILER"
-INPUT_DIR="input"
-EXPECTED_DIR="tests/expected"
-OUTPUT_DIR="tests/output"
-MIPS_OUT="$OUTPUT_DIR/mips.s"
-TEMP_OUT="$OUTPUT_DIR/actual.txt"
+set -euo pipefail
 
-# Colors for output
+SCRIPT_DIR="/Users/eranshufaro/IdeaProjects/compilation/ex5"
+INPUT_DIR="${SCRIPT_DIR}/input"
+EXPECTED_DIR="${SCRIPT_DIR}/expected_output"
+ACTUAL_DIR="${SCRIPT_DIR}/output"
+DIFF_REPORT="${SCRIPT_DIR}/diff_report.txt"
+COMPILER="${SCRIPT_DIR}/COMPILER"
+
+# ── Colours ──────────────────────────────────────────────────
 GREEN='\033[0;32m'
 RED='\033[0;31m'
-NC='\033[0m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+RESET='\033[0m'
 
-# Ensure directories exist
-mkdir -p "$OUTPUT_DIR"
+# ── Step 1: Build ─────────────────────────────────────────────
+echo -e "${BOLD}${CYAN}============================================================${RESET}"
+echo -e "${BOLD}${CYAN}  Building with make ...${RESET}"
+echo -e "${BOLD}${CYAN}============================================================${RESET}"
 
-# Build the compiler first
-echo "Building compiler..."
-make > /dev/null 2>&1
+# if make -C "${SCRIPT_DIR}" compile; then
+#     echo -e "${GREEN}Build succeeded.${RESET}\n"
+# else
+#     echo -e "${RED}Build FAILED. Aborting tests.${RESET}"
+#     exit 1
+# fi
 
-if [ $? -ne 0 ]; then
-    echo -e "${RED}Failed to build compiler!${NC}"
+mkdir -p "${ACTUAL_DIR}"
+
+# ── Check for spim ────────────────────────────────────────────
+if ! command -v spim &>/dev/null; then
+    echo -e "${RED}ERROR: 'spim' not found in PATH. Cannot execute MIPS assembly.${RESET}"
     exit 1
 fi
 
-echo "Running tests..."
-echo "--------------------------------"
+# ── Step 2: Run tests ─────────────────────────────────────────
+passed=0
+failed=0
+total=0
 
-# Run ALL .txt files in INPUT_DIR
-for IN_FILE in "$INPUT_DIR"/*.txt; do
-    FILENAME=$(basename "$IN_FILE")
-    # Determine the test ID (e.g., TEST_01 from TEST_01_Print_Primes.txt)
-    # Match the pattern TEST_XX
-    TEST_ID=$(echo "$FILENAME" | grep -oE "TEST_[0-9]+")
-    
-    if [ -z "$TEST_ID" ]; then
-        TEST_ID="${FILENAME%.txt}"
+# Clear (or create) the diff report
+{
+    echo "============================================================"
+    echo "  DIFF REPORT  --  $(date)"
+    echo "============================================================"
+} > "${DIFF_REPORT}"
+
+echo -e "${BOLD}${CYAN}============================================================${RESET}"
+echo -e "${BOLD}${CYAN}  Running tests ...${RESET}"
+echo -e "${BOLD}${CYAN}============================================================${RESET}"
+
+for input_file in "${INPUT_DIR}"/TEST_*.txt; do
+    test_basename="$(basename "${input_file}" .txt)"   # e.g. TEST_01_Print_Primes
+
+    # ── Locate the matching expected output ──────────────────
+    expected_file=""
+    for candidate in \
+        "${EXPECTED_DIR}/${test_basename}_Expected_Output.txt" \
+        "${EXPECTED_DIR}/${test_basename%_*}_Expected_Output.txt"
+    do
+        if [[ -f "${candidate}" ]]; then
+            expected_file="${candidate}"
+            break
+        fi
+    done
+
+    # Fallback: glob-search using numeric prefix (e.g. TEST_18)
+    if [[ -z "${expected_file}" ]]; then
+        num_prefix="${test_basename%%_*}_$(echo "${test_basename}" | cut -d_ -f2)"
+        matches=( "${EXPECTED_DIR}/${num_prefix}"*_Expected_Output.txt )
+        if [[ -f "${matches[0]}" ]]; then
+            expected_file="${matches[0]}"
+        fi
     fi
 
-    echo "Running $FILENAME..."
+    if [[ -z "${expected_file}" ]]; then
+        echo -e "  ${RED}[SKIP]${RESET}  ${test_basename}  (no expected output file found)"
+        continue
+    fi
 
-    # 1. Run compiler
-    if [[ "$FILENAME" == *"TEST_31"* ]]; then
-        # Special case for TEST_31 (VTable check)
-        echo "  [Compiler] java -jar $COMPILER $IN_FILE $MIPS_OUT"
-        java -jar "$COMPILER" "$IN_FILE" "$MIPS_OUT" > "$TEMP_OUT" 2>&1
-        grep "VTABLE LAYOUT" "$TEMP_OUT" > "$OUTPUT_DIR/vtable_out.txt" 2>/dev/null
-        ACTUAL_COMPARE="$OUTPUT_DIR/vtable_out.txt"
-        EXPECTED_FILE="$EXPECTED_DIR/TEST_31.txt"
+    asm_file="${ACTUAL_DIR}/${test_basename}.asm"
+    actual_file="${ACTUAL_DIR}/${test_basename}_Actual_Output.txt"
+    compiler_stderr="${ACTUAL_DIR}/${test_basename}_compiler_stderr.txt"
+    total=$(( total + 1 ))
+
+    # ── Run the compiler ──────────────────────────────────────
+    if ! java -jar "${COMPILER}" "${input_file}" "${asm_file}" 2>"${compiler_stderr}"; then
+        # Compiler failed with non-zero exit – use stderr as the actual output
+        cp "${compiler_stderr}" "${actual_file}"
     else
-        echo "  [Compiler] java -jar $COMPILER $IN_FILE $MIPS_OUT"
-        java -jar "$COMPILER" "$IN_FILE" "$MIPS_OUT" > /dev/null 2>&1
-        if [ $? -ne 0 ]; then
-            echo -e "  ${RED}Compilation failed!${NC}"
-            continue
-        fi
-        
-        # 2. Run SPIM
-        # We filter out the 'Loaded:' line which varies by environment
-        echo "  [SPIM] spim -f $MIPS_OUT"
-        spim -f "$MIPS_OUT" 2>&1 | grep -v "Loaded:" | tee "$TEMP_OUT" | sed 's/^/    /'
-        ACTUAL_COMPARE="$TEMP_OUT"
-        
-        # Look for expected file: exact name or ID based name
-        EXPECTED_FILE="$EXPECTED_DIR/$FILENAME"
-        if [ ! -f "$EXPECTED_FILE" ]; then
-            EXPECTED_FILE="$EXPECTED_DIR/$TEST_ID.txt"
-        fi
-    fi
-
-    # 3. Compare with expected if it exists
-    if [ -f "$EXPECTED_FILE" ]; then
-        # Diff ignoring whitespace changes
-        diff -b "$ACTUAL_COMPARE" "$EXPECTED_FILE" > /dev/null
-        if [ $? -eq 0 ]; then
-            echo -e "  Result: ${GREEN}PASSED${NC}"
+        # Compiler succeeded (exit 0)
+        # Check if the output is actually an error message (like TEST_26 or Lexer ERROR) instead of MIPS Assembly
+        if head -n 1 "${asm_file}" | grep -qE "Register Allocation Failed|^ERROR"; then
+            cp "${asm_file}" "${actual_file}"
         else
-            echo -e "  Result: ${RED}FAILED${NC}"
-            echo "  Differences:"
-            diff -u "$EXPECTED_FILE" "$ACTUAL_COMPARE" | sed 's/^/    /'
+            # Execute the assembly through SPIM
+            spim -file "${asm_file}" > "${actual_file}" 2>&1 || true
         fi
+    fi
+
+    # ── Compare output ────────────────────────────────────────
+    if diff -q -b "${expected_file}" "${actual_file}" > /dev/null 2>&1; then
+        echo "PASS"
     else
-        echo -e "  Result: ${GREEN}EXECUTED (No expected file)${NC}"
+        echo -e "  ${RED}[FAIL]${RESET}  ${test_basename}"
+        failed=$(( failed + 1 ))
+        {
+            echo ""
+            echo "------------------------------------------------------------"
+            echo "  TEST: ${test_basename}"
+            echo "  STATUS: FAIL"
+            echo "  DIFF (expected vs actual):"
+            echo "------------------------------------------------------------"
+            diff --unified=3 "${expected_file}" "${actual_file}" || true
+        } >> "${DIFF_REPORT}"
     fi
 done
 
-echo "--------------------------------"
-echo "Tests complete."
+# ── Step 3: Summary ───────────────────────────────────────────
+echo ""
+echo -e "${BOLD}${CYAN}============================================================${RESET}"
+printf "${BOLD}  Results: ${GREEN}%d passed${RESET}${BOLD}, ${RED}%d failed${RESET}${BOLD}, %d total${RESET}\n" \
+    "${passed}" "${failed}" "${total}"
+echo -e "${BOLD}${CYAN}============================================================${RESET}"
+echo -e "  Diff report written to: ${DIFF_REPORT}"
+echo ""
 
+if [[ "${failed}" -gt 0 ]]; then
+    exit 1
+fi

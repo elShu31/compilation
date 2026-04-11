@@ -1,0 +1,2 @@
+Loaded: /opt/homebrew/Cellar/spim/9.1.24/share/exceptions.s
+meowwooftweetFelix21 2 13325 32767 -32768 1 0 meowwoof1 0 4441 17 225 

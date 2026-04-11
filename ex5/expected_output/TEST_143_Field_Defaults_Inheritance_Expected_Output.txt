@@ -1,0 +1,2 @@
+Loaded: /opt/homebrew/Cellar/spim/9.1.24/share/exceptions.s
+4 0 generic4 4 0 generic1000 3 6 

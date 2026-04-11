@@ -1,0 +1,2 @@
+Loaded: /opt/homebrew/Cellar/spim/9.1.24/share/exceptions.s
+a1 b2 c3 end
