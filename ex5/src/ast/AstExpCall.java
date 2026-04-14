@@ -231,7 +231,11 @@ public class AstExpCall extends AstExp {
 				new IrCommandVirtualCall(thisPtr, methodVtableOffset, totalArgs, retVal));
 		} else {
 			// Static dispatch using jal
-			Ir.getInstance().AddIrCommand(new IrCommandCall(funcName, totalArgs, retVal));
+			String actualFuncName = funcName;
+			if (!funcName.equals("main") && !funcName.equals("PrintInt") && !funcName.equals("PrintString")) {
+				actualFuncName = "f_" + funcName;
+			}
+			Ir.getInstance().AddIrCommand(new IrCommandCall(actualFuncName, totalArgs, retVal));
 		}
 
 		return retVal;

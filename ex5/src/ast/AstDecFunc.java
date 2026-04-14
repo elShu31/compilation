@@ -10,6 +10,7 @@ public class AstDecFunc extends AstNode {
 	public String funcName;
 	public AstParametersList params;
 	public AstStmtList body;
+	public boolean isMethod = false;
 
 	public AstDecFunc(AstType returnType, String funcName, AstParametersList params, AstStmtList body, int lineNumber) {
 		serialNumber = AstNode.getFreshSerialNumber();
@@ -47,6 +48,7 @@ public class AstDecFunc extends AstNode {
 	/* isMethod = false for standalone functions */
 	/******************************************************************/
 	public Type semantMe(boolean isMethod) throws SemanticException {
+		this.isMethod = isMethod;
 		Type paramType;
 		Type retType = null;
 		TypeList paramTypeList = null;
@@ -152,10 +154,12 @@ public class AstDecFunc extends AstNode {
 	}
 
 	public Temp irMe() {
-		Ir.getInstance().AddIrCommand(new IrCommandLabel(funcName));
+		String actualFuncName = (isMethod || funcName.equals("main")) ? funcName : "f_" + funcName;
+
+		Ir.getInstance().AddIrCommand(new IrCommandLabel(actualFuncName));
 
 		int localVarsSize = countLocalVars() * 4;
-		Ir.getInstance().AddIrCommand(new IrCommandPrologue(funcName, localVarsSize));
+		Ir.getInstance().AddIrCommand(new IrCommandPrologue(actualFuncName, localVarsSize));
 
 		if (body != null)
 			body.irMe();
@@ -163,10 +167,10 @@ public class AstDecFunc extends AstNode {
 		if (returnType != null && !returnType.typeName.equals("void")) {
 			Temp zeroTmp = TempFactory.getInstance().getFreshTemp();
 			Ir.getInstance().AddIrCommand(new IRcommandConstInt(zeroTmp, 0));
-			Ir.getInstance().AddIrCommand(new IrCommandReturn(funcName, zeroTmp));
+			Ir.getInstance().AddIrCommand(new IrCommandReturn(actualFuncName, zeroTmp));
 		}
 
-		Ir.getInstance().AddIrCommand(new IrCommandEpilogue(funcName));
+		Ir.getInstance().AddIrCommand(new IrCommandEpilogue(actualFuncName));
 
 		return null;
 	}
