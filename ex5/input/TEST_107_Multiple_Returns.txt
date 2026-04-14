@@ -1,4 +1,4 @@
-int myAbs(int x)
+int abs(int x)
 {
     if (x < 0) { return 0 - x; }
     return x;
@@ -6,7 +6,7 @@ int myAbs(int x)
 
 void main()
 {
-    PrintInt(myAbs(5));
-    PrintInt(myAbs(0 - 3));
-    PrintInt(myAbs(0));
+    PrintInt(abs(5));
+    PrintInt(abs(0 - 3));
+    PrintInt(abs(0));
 }

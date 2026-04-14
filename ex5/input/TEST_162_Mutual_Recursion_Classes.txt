@@ -5,7 +5,7 @@ int isEven(int n)
     return isEven(n - 2);
 }
 
-int myAbs(int n)
+int abs(int n)
 {
     if (n < 0)
     {
@@ -38,9 +38,9 @@ void main()
     PrintInt(isEven(1));
     PrintInt(isEven(4));
     PrintInt(isEven(7));
-    PrintInt(myAbs(5));
-    PrintInt(myAbs(0 - 5));
-    PrintInt(myAbs(0));
+    PrintInt(abs(5));
+    PrintInt(abs(0 - 5));
+    PrintInt(abs(0));
     PrintInt(max(3, 7));
     PrintInt(max(10, 2));
     PrintInt(min(3, 7));
